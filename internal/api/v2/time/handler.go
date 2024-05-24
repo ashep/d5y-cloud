@@ -12,21 +12,10 @@ import (
 	"github.com/ashep/d5y/internal/tz"
 )
 
-type ResponseTimestamp struct {
+type Response struct {
 	TZ     string `json:"tz"`
 	TZData string `json:"tz_data"`
 	Value  int64  `json:"value"`
-}
-
-type ResponseGeo struct {
-	Country  string `json:"country"`
-	Region   string `json:"region"`
-	City     string `json:"city"`
-	Timezone string `json:"timezone"`
-}
-
-type Response struct {
-	Timestamp *ResponseTimestamp `json:"timestamp,omitempty"`
 }
 
 type Handler struct {
@@ -43,9 +32,7 @@ func New(geoIPSvc *geoip.Service, l zerolog.Logger) *Handler {
 
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	res := &Response{
-		Timestamp: &ResponseTimestamp{
-			Value: time.Now().Unix(),
-		},
+		Value: time.Now().Unix(),
 	}
 
 	rAddr := remoteaddr.FromCtx(r.Context())
@@ -62,8 +49,8 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res.Timestamp.TZ = geo.Timezone
-	res.Timestamp.TZData = tz.ToPosix(geo.Timezone)
+	res.TZ = geo.Timezone
+	res.TZData = tz.ToPosix(geo.Timezone)
 
 	b, err := json.Marshal(res)
 	if err != nil {
