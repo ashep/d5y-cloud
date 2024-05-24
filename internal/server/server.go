@@ -8,6 +8,8 @@ import (
 
 	"github.com/ashep/d5y/internal/auth"
 	"github.com/ashep/d5y/internal/geoip"
+	"github.com/ashep/d5y/internal/httplog"
+	"github.com/ashep/d5y/internal/remoteaddr"
 	"github.com/ashep/d5y/internal/weather"
 
 	handlerV1 "github.com/ashep/d5y/internal/api/v1"
@@ -22,14 +24,15 @@ type Server struct {
 func New(addr, weatherAPIKey string, l zerolog.Logger) *Server {
 	mux := http.NewServeMux()
 
-	gi := geoip.New()
-	wth := weather.New(weatherAPIKey)
+	geoIPSvc := geoip.New()
+	weatherSvc := weather.New(weatherAPIKey)
 
-	hv1 := handlerV1.New(gi, wth, l)
-	mux.HandleFunc("/", geoip.WrapHTTP(hv1.Handle, gi, l)) // BC
+	hv1 := handlerV1.New(geoIPSvc, weatherSvc, l)
+	mux.HandleFunc("/", wrapMiddlewares(hv1.Handle, geoIPSvc, l.With().Str("pkg", "v1_middleware").Logger())) // BC
 
-	hv2 := handlerV2.New(gi, wth, l)
-	mux.Handle("/v2/me", auth.WrapHTTP(geoip.WrapHTTP(hv2.HandleMe, gi, l)))
+	hv2 := handlerV2.New(geoIPSvc, weatherSvc, l)
+	mux.Handle("/v2/time", wrapMiddlewares(hv2.HandleTime, geoIPSvc, l.With().Str("pkg", "time_middleware").Logger()))
+	mux.Handle("/v2/weather", wrapMiddlewares(hv2.HandleWeather, geoIPSvc, l.With().Str("pkg", "weather_middleware").Logger()))
 
 	return &Server{
 		s: &http.Server{Addr: addr, Handler: mux},
@@ -51,4 +54,13 @@ func (s *Server) Shutdown(ctx context.Context) {
 	}
 
 	s.l.Info().Msg("server stopped")
+}
+
+func wrapMiddlewares(h http.HandlerFunc, geoIPSvc *geoip.Service, l zerolog.Logger) http.HandlerFunc {
+	h = httplog.LogRequest(h, l) // called last
+	h = auth.WrapHTTP(h)
+	h = geoip.WrapHTTP(h, geoIPSvc, l)
+	h = remoteaddr.WrapHTTP(h) // called first
+
+	return h
 }

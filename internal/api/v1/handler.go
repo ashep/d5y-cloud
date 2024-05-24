@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/geoip"
-	"github.com/ashep/d5y/internal/httputil"
+	"github.com/ashep/d5y/internal/remoteaddr"
 	"github.com/ashep/d5y/internal/weather"
 )
 
@@ -36,50 +36,24 @@ func New(g *geoip.Service, w *weather.Client, l zerolog.Logger) *Handler {
 	return &Handler{
 		geoIP:   g,
 		weather: w,
-		l:       l,
+		l:       l.With().Str("pkg", "v1_handler").Logger(),
 	}
 }
 
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
-	rAddr, err := httputil.RemoteAddr(r)
-	if err != nil {
-		h.l.Info().
-			Str("method", r.Method).
-			Str("uri", r.RequestURI).
-			Str("ua", r.Header.Get("User-Agent")).
-			Msg("request")
-
-		h.l.Error().Err(err).Msg("remote address get failed")
-
+	rAddr := remoteaddr.FromRequest(r)
+	if rAddr == "" {
+		h.l.Error().Msg("empty remote address")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	geo := geoip.FromCtx(r.Context())
 	if geo == nil {
-		h.l.Info().
-			Str("method", r.Method).
-			Str("uri", r.RequestURI).
-			Str("remote", rAddr).
-			Str("ua", r.Header.Get("User-Agent")).
-			Msg("request")
-
-		h.l.Warn().Err(err).Msg("geoip get failed")
-
+		h.l.Warn().Msg("empty geo ip data")
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-
-	h.l.Info().
-		Str("method", r.Method).
-		Str("uri", r.RequestURI).
-		Str("remote", rAddr).
-		Str("country", geo.CountryName).
-		Str("region", geo.RegionName).
-		Str("city", geo.City).
-		Str("tz", geo.Timezone).
-		Str("ua", r.Header.Get("User-Agent")).
-		Msg("request")
 
 	tz, err := time.LoadLocation(geo.Timezone)
 	if err != nil {
@@ -107,8 +81,8 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	weatherData, err := h.weather.GetForIPAddr(rAddr)
 	if err == nil {
 		resp.Weather = true
-		resp.Temp = weatherData["current"].Temp
-		resp.FeelsLike = weatherData["current"].FeelsLike
+		resp.Temp = weatherData.Current.Temp
+		resp.FeelsLike = weatherData.Current.FeelsLike
 	} else {
 		h.l.Error().Err(err).Msg("weather get failed")
 	}

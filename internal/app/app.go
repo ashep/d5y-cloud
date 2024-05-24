@@ -21,10 +21,6 @@ func New(cfg Config, l zerolog.Logger) *App {
 		cfg.Server.Addr = ":9000"
 	}
 
-	if cfg.Weather.APIKey == "" {
-		l.Error().Msg("empty weather api key")
-	}
-
 	return &App{
 		cfg: cfg,
 		l:   l,

@@ -6,16 +6,15 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/ashep/d5y/internal/httputil"
+	"github.com/ashep/d5y/internal/remoteaddr"
 )
 
-var ctxKey = struct{}{}
+var ctxKey = "geoIP"
 
 func WrapHTTP(next http.HandlerFunc, svc *Service, l zerolog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rAddr, err := httputil.RemoteAddr(r)
-		if err != nil {
-			l.Error().Err(err).Msg("get remote address failed")
+		rAddr := remoteaddr.FromCtx(r.Context())
+		if rAddr == "" {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -27,7 +26,7 @@ func WrapHTTP(next http.HandlerFunc, svc *Service, l zerolog.Logger) http.Handle
 			return
 		}
 
-		next.ServeHTTP(w, r.Clone(context.WithValue(context.Background(), ctxKey, data)))
+		next.ServeHTTP(w, r.Clone(context.WithValue(r.Context(), ctxKey, data)))
 	}
 }
 

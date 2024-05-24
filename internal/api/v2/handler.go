@@ -5,21 +5,28 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/ashep/d5y/internal/api/v2/me"
+	timeh "github.com/ashep/d5y/internal/api/v2/time"
+	weatherh "github.com/ashep/d5y/internal/api/v2/weather"
 	"github.com/ashep/d5y/internal/geoip"
 	"github.com/ashep/d5y/internal/weather"
 )
 
 type Handler struct {
-	me *me.Handler
+	time    *timeh.Handler
+	weather *weatherh.Handler
 }
 
 func New(geoIPCli *geoip.Service, weatherCli *weather.Client, l zerolog.Logger) *Handler {
 	return &Handler{
-		me: me.New(geoIPCli, weatherCli, l),
+		time:    timeh.New(geoIPCli, l.With().Str("pkg", "time_handler").Logger()),
+		weather: weatherh.New(weatherCli, l.With().Str("pkg", "weather_handler").Logger()),
 	}
 }
 
-func (h *Handler) HandleMe(w http.ResponseWriter, r *http.Request) {
-	h.me.Handle(w, r)
+func (h *Handler) HandleTime(w http.ResponseWriter, r *http.Request) {
+	h.time.Handle(w, r)
+}
+
+func (h *Handler) HandleWeather(w http.ResponseWriter, r *http.Request) {
+	h.weather.Handle(w, r)
 }

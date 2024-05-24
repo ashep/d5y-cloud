@@ -24,7 +24,9 @@ type DataItem struct {
 	IconURL   string  `json:"icon"`
 }
 
-type Data map[string]DataItem
+type Data struct {
+	Current DataItem `json:"current"`
+}
 
 type wAPIRespCondition struct {
 	Code int    `json:"code"`
@@ -51,7 +53,11 @@ func New(apiKey string) *Client {
 	}
 }
 
-func (c *Client) GetForIPAddr(addr string) (Data, error) {
+func (c *Client) GetForIPAddr(addr string) (*Data, error) {
+	if c.apiKey == "" {
+		return nil, fmt.Errorf("empty weather api key")
+	}
+
 	apiURL := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", c.apiKey, addr)
 	owRes := &wAPIResp{}
 
@@ -60,14 +66,15 @@ func (c *Client) GetForIPAddr(addr string) (Data, error) {
 		return nil, err
 	}
 
-	res := make(Data)
-	res["current"] = DataItem{
-		Title:     owRes.Current.Condition.Text,
-		IconURL:   owRes.Current.Condition.Icon,
-		Temp:      owRes.Current.Temp,
-		FeelsLike: owRes.Current.FeelsLike,
-		Pressure:  owRes.Current.Pressure,
-		Humidity:  owRes.Current.Humidity,
+	res := &Data{
+		Current: DataItem{
+			Title:     owRes.Current.Condition.Text,
+			IconURL:   owRes.Current.Condition.Icon,
+			Temp:      owRes.Current.Temp,
+			FeelsLike: owRes.Current.FeelsLike,
+			Pressure:  owRes.Current.Pressure,
+			Humidity:  owRes.Current.Humidity,
+		},
 	}
 
 	return res, nil
