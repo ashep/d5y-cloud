@@ -1,10 +1,9 @@
 name: d5y-cloud
 services:
   app:
+    image: ashep/d5y-cloud:latest
     restart: unless-stopped
-    build:
-      context: .
-      dockerfile: ./Dockerfile
+    pull_policy: always
     ports:
       - 127.0.0.1:${HTTP_PORT}:9000
     environment:
