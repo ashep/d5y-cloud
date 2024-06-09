@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: ./Dockerfile
     ports:
-      - 127.0.0.1:${EXT_PORT}:9000
+      - 127.0.0.1:${HTTP_PORT}:9000
     environment:
       APP_SERVER_ADDR: :9000
       APP_WEATHER_APIKEY: ${WEATHER_APIKEY}
