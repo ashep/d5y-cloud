@@ -21,11 +21,15 @@ func New() *Client {
 	}
 }
 
-func (c *Client) GetJSON(u string, dest interface{}) error {
-	resp, err := c.cli.Get(u)
+func (c *Client) GetJSON(u string, dst interface{}) error {
+	resp, err := c.cli.Get(u) //nolint:noctx // ok
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return errors.New("bad response: " + resp.Status)
@@ -36,7 +40,7 @@ func (c *Client) GetJSON(u string, dest interface{}) error {
 		return errors.New("failed to read the response: " + err.Error())
 	}
 
-	err = json.Unmarshal(bytes, dest)
+	err = json.Unmarshal(bytes, dst)
 	if err != nil {
 		return errors.New("failed to unmarshal the response: " + err.Error())
 	}

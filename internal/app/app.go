@@ -27,7 +27,7 @@ func New(cfg Config, l zerolog.Logger) *App {
 	}
 }
 
-func (a *App) Run(ctx context.Context, args []string) error {
+func (a *App) Run(ctx context.Context, _ []string) error {
 	s := server.New(a.cfg.Server.Addr, a.cfg.Weather.APIKey, a.l)
 
 	done := make(chan struct{})
@@ -47,7 +47,8 @@ func (a *App) Run(ctx context.Context, args []string) error {
 	case <-ctx.Done():
 		sdCtx, sdCtxC := context.WithTimeout(context.Background(), time.Second*5)
 		defer sdCtxC()
-		s.Shutdown(sdCtx)
+
+		s.Shutdown(sdCtx) //nolint:contextcheck // ok
 	}
 
 	return nil

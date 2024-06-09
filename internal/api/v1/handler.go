@@ -44,6 +44,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		h.l.Warn().Str("path", r.URL.Path).Msg("unexpected path")
 		w.WriteHeader(http.StatusNotFound)
+
 		return
 	}
 
@@ -51,6 +52,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	if rAddr == "" {
 		h.l.Error().Msg("empty remote address")
 		w.WriteHeader(http.StatusInternalServerError)
+
 		return
 	}
 
@@ -58,6 +60,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	if geo == nil {
 		h.l.Warn().Msg("empty geo ip data")
 		w.WriteHeader(http.StatusInternalServerError)
+
 		return
 	}
 
@@ -65,6 +68,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.l.Warn().Err(err).Msg("time zone detect failed")
 	}
+
 	t := time.Now().In(tz)
 
 	// Fix weekday number
@@ -97,11 +101,13 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.l.Error().Err(err).Msg("response marshal failed")
 		w.WriteHeader(http.StatusInternalServerError)
+
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+
 	if _, err = w.Write(d); err != nil {
 		h.l.Error().Err(err).Msg("response write failed")
 	}

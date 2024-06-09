@@ -39,6 +39,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	if rAddr == "" {
 		h.l.Error().Msg("no remote addr in request context")
 		w.WriteHeader(http.StatusInternalServerError)
+
 		return
 	}
 
@@ -46,6 +47,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	if geo == nil {
 		h.l.Error().Msg("no geo ip data in request context")
 		w.WriteHeader(http.StatusInternalServerError)
+
 		return
 	}
 
@@ -56,11 +58,13 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.l.Error().Err(err).Msg("response marshal error")
 		w.WriteHeader(http.StatusInternalServerError)
+
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+
 	if _, err = w.Write(b); err != nil {
 		h.l.Error().Err(err).Msg("response write error")
 		return

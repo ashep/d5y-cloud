@@ -1,6 +1,6 @@
 module github.com/ashep/d5y
 
-go 1.22.1
+go 1.22.4
 
 require (
 	github.com/ashep/go-apprun v0.0.0-20240330094625-311880266344

@@ -56,8 +56,8 @@ func (s *Service) Get(addr string) (*Data, error) {
 	}
 
 	d = &Data{}
-	err := s.cli.GetJSON("http://ip-api.com/json/"+addr, d)
-	if err != nil {
+
+	if err := s.cli.GetJSON("http://ip-api.com/json/"+addr, d); err != nil {
 		return nil, err
 	}
 

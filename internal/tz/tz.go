@@ -8,16 +8,20 @@ import (
 	"sync"
 )
 
-//go:embed zoneinfo
-var zoneInfo embed.FS
+var (
+	//go:embed zoneinfo
+	zoneInfo embed.FS
+	cache    map[string]string
+	mux      *sync.Mutex
+)
 
-var cache map[string]string
-
-var mux *sync.Mutex
+const (
+	utcPosixName = "UTC0"
+)
 
 func ToPosix(s string) string {
 	if s == "" {
-		return "UTC0"
+		return utcPosixName
 	}
 
 	if mux == nil {
@@ -38,13 +42,13 @@ func ToPosix(s string) string {
 	b, err := zoneInfo.ReadFile("zoneinfo/" + s)
 	if err != nil {
 		log.Printf("tz: failed to read zone data for %s: %v", s, err)
-		return "UTC0"
+		return utcPosixName
 	}
 
 	bs := bytes.SplitN(b, []byte("\n"), -1)
 	if len(bs) < 2 {
 		log.Printf("tz: failed to read zone data for %s: %v", s, err)
-		return "UTC0"
+		return utcPosixName
 	}
 
 	res := strings.TrimSpace(string(bs[len(bs)-2]))

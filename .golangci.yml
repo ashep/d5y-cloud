@@ -18,7 +18,7 @@ linters:
     - errchkjson
     - errname
     - errorlint
-    - execinquery
+    #    - execinquery
     - exhaustive
     #    - exhaustivestruct
     #    - exhaustruct
@@ -29,7 +29,7 @@ linters:
     #    - gci
     - ginkgolinter
     - gocheckcompilerdirectives
-    - gochecknoglobals
+    #    - gochecknoglobals
     - gochecknoinits
     - gocognit
     - goconst
@@ -43,7 +43,7 @@ linters:
     - goheader
     - goimports
     #    - golint
-    - gomnd
+    #    - gomnd
     - gomoddirectives
     - gomodguard
     - goprintffuncname

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog"
 
@@ -37,7 +38,11 @@ func New(addr, weatherAPIKey string, l zerolog.Logger) *Server {
 	mux.Handle("/v2/weather", wrapMiddlewares(hv2.HandleWeather, geoIPSvc, lv2))
 
 	return &Server{
-		s: &http.Server{Addr: addr, Handler: mux},
+		s: &http.Server{
+			Addr:        addr,
+			Handler:     mux,
+			ReadTimeout: time.Second * 5,
+		},
 		l: l,
 	}
 }
