@@ -9,7 +9,9 @@ import (
 	"github.com/ashep/d5y/internal/remoteaddr"
 )
 
-var ctxKey = "geoIP"
+type ctxKeyType string
+
+const ctxKey ctxKeyType = "geoIP"
 
 func WrapHTTP(next http.HandlerFunc, svc *Service, l zerolog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

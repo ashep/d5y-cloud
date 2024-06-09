@@ -6,7 +6,9 @@ import (
 	"strings"
 )
 
-var ctxKey = "authToken"
+type ctxKeyType string
+
+const ctxKey ctxKeyType = "authToken"
 
 func WrapHTTP(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

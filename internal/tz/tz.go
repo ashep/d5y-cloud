@@ -3,7 +3,6 @@ package tz
 import (
 	"bytes"
 	"embed"
-	_ "embed"
 	"log"
 	"strings"
 	"sync"

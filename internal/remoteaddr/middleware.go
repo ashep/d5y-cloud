@@ -5,7 +5,9 @@ import (
 	"net/http"
 )
 
-var ctxKey = "remoteAddress"
+type ctxKeyType string
+
+const ctxKey ctxKeyType = "remoteAddress"
 
 func WrapHTTP(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
