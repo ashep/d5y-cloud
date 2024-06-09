@@ -1,7 +1,7 @@
 name: d5y-cloud
 services:
   app:
-    image: ashep/d5y-cloud:latest
+    image: ${APP_OWNER}/${APP_NAME}:${APP_VERSION}
     restart: unless-stopped
     pull_policy: always
     ports:
