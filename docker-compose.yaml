@@ -1,3 +1,4 @@
+name: d5y-cloud
 services:
   app:
     restart: unless-stopped
