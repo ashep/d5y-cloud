@@ -36,11 +36,17 @@ func New(g *geoip.Service, w *weather.Client, l zerolog.Logger) *Handler {
 	return &Handler{
 		geoIP:   g,
 		weather: w,
-		l:       l.With().Str("pkg", "v1_handler").Logger(),
+		l:       l,
 	}
 }
 
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		h.l.Warn().Str("path", r.URL.Path).Msg("unexpected path")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
 	rAddr := remoteaddr.FromRequest(r)
 	if rAddr == "" {
 		h.l.Error().Msg("empty remote address")

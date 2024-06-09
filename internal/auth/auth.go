@@ -11,7 +11,7 @@ var ctxKey = "authToken"
 func WrapHTTP(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tok := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))
-		if tok == "" {
+		if tok == "" { // optional for now
 			next.ServeHTTP(w, r)
 			return
 		}

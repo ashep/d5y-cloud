@@ -18,8 +18,8 @@ type Handler struct {
 
 func New(geoIPCli *geoip.Service, weatherCli *weather.Client, l zerolog.Logger) *Handler {
 	return &Handler{
-		time:    timeh.New(geoIPCli, l.With().Str("pkg", "time_handler").Logger()),
-		weather: weatherh.New(weatherCli, l.With().Str("pkg", "weather_handler").Logger()),
+		time:    timeh.New(geoIPCli, l.With().Str("handler", "time").Logger()),
+		weather: weatherh.New(weatherCli, l.With().Str("handler", "weather").Logger()),
 	}
 }
 

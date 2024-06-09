@@ -1,7 +1,6 @@
 package httplog
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/rs/zerolog"
@@ -13,8 +12,6 @@ import (
 
 func LogRequest(next http.HandlerFunc, l zerolog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println(r.Context())
-
 		log := l.Info().
 			Str("method", r.Method).
 			Str("uri", r.RequestURI).

@@ -27,12 +27,14 @@ func New(addr, weatherAPIKey string, l zerolog.Logger) *Server {
 	geoIPSvc := geoip.New()
 	weatherSvc := weather.New(weatherAPIKey)
 
+	lv1 := l.With().Str("pkg", "v1_handler").Logger()
 	hv1 := handlerV1.New(geoIPSvc, weatherSvc, l)
-	mux.HandleFunc("/", wrapMiddlewares(hv1.Handle, geoIPSvc, l.With().Str("pkg", "v1_middleware").Logger())) // BC
+	mux.HandleFunc("/", wrapMiddlewares(hv1.Handle, geoIPSvc, lv1)) // BC
 
-	hv2 := handlerV2.New(geoIPSvc, weatherSvc, l)
-	mux.Handle("/v2/time", wrapMiddlewares(hv2.HandleTime, geoIPSvc, l.With().Str("pkg", "time_middleware").Logger()))
-	mux.Handle("/v2/weather", wrapMiddlewares(hv2.HandleWeather, geoIPSvc, l.With().Str("pkg", "weather_middleware").Logger()))
+	lv2 := l.With().Str("pkg", "v2_handler").Logger()
+	hv2 := handlerV2.New(geoIPSvc, weatherSvc, lv2)
+	mux.Handle("/v2/time", wrapMiddlewares(hv2.HandleTime, geoIPSvc, lv2))
+	mux.Handle("/v2/weather", wrapMiddlewares(hv2.HandleWeather, geoIPSvc, lv2))
 
 	return &Server{
 		s: &http.Server{Addr: addr, Handler: mux},
