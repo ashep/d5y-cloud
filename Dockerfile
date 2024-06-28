@@ -3,4 +3,4 @@ COPY . /app
 WORKDIR /app
 RUN go build
 #ENTRYPOINT ["/app/d5y"]
-ENTRYPOINT ["sh", "-c", "env && /app/app"]
+ENTRYPOINT ["sh", "-c", "env && /app/d5y"]
