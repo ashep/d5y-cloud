@@ -19,5 +19,4 @@ func New(l zerolog.Logger) *Handler {
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	h.l.Warn().Str("path", r.URL.Path).Msg("not found")
 	w.WriteHeader(http.StatusNotFound)
-	return
 }
