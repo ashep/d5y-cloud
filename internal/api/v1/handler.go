@@ -41,7 +41,7 @@ func New(g *geoip.Service, w *weather.Client, l zerolog.Logger) *Handler {
 }
 
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
+	if r.URL.Path != "/" && r.URL.Path != "/api/1" {
 		h.l.Warn().Str("path", r.URL.Path).Msg("unexpected path")
 		w.WriteHeader(http.StatusNotFound)
 
