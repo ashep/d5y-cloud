@@ -7,5 +7,6 @@ services:
     ports:
       - 127.0.0.1:${HTTP_PORT}:9000
     environment:
-      APP_SERVER_ADDR: :9000
-      APP_WEATHER_APIKEY: ${WEATHER_APIKEY}
+      SERVER_ADDR: :9000
+      WEATHER_APIKEY: ${WEATHER_APIKEY}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
