@@ -10,6 +10,7 @@ import (
 
 func WriteBadRequest(w http.ResponseWriter, msg string, l zerolog.Logger) {
 	w.WriteHeader(http.StatusBadRequest)
+
 	if _, err := w.Write([]byte(msg)); err != nil {
 		l.Error().Err(err).Msg("failed to write response")
 	}
@@ -17,6 +18,7 @@ func WriteBadRequest(w http.ResponseWriter, msg string, l zerolog.Logger) {
 
 func WriteNotFound(w http.ResponseWriter, msg string, l zerolog.Logger) {
 	w.WriteHeader(http.StatusNotFound)
+
 	if _, err := w.Write([]byte(msg)); err != nil {
 		l.Error().Err(err).Msg("failed to write response")
 	}

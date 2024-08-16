@@ -26,7 +26,7 @@ type Release struct {
 
 type ReleaseSet []Release
 
-// Next returns the release which version number is after v
+// Next returns the release which version number is after v.
 func (r ReleaseSet) Next(v *semver.Version) *Release {
 	if len(r) == 0 {
 		return nil
@@ -41,6 +41,7 @@ func (r ReleaseSet) Next(v *semver.Version) *Release {
 	}
 
 	curIdx := -1
+
 	for i, rl := range r {
 		if rl.Version.Equal(v) {
 			curIdx = i

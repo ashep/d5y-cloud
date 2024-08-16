@@ -1,7 +1,6 @@
 package update
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
@@ -48,13 +47,14 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 	if qVer == "" {
 		qVer = "0.0.0"
 	}
+
 	ver, err := semver.NewVersion(qVer)
 	if err != nil {
 		handlerutil.WriteBadRequest(w, "invalid version", h.l)
 		return
 	}
 
-	rls, err := h.updSvc.List(context.Background(), prod, arch)
+	rls, err := h.updSvc.List(r.Context(), prod, arch)
 	if errors.Is(err, update.ErrProductNotFound) {
 		handlerutil.WriteNotFound(w, err.Error(), h.l)
 		return
