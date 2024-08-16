@@ -28,11 +28,11 @@ type Response struct {
 
 type Handler struct {
 	geoIP   *geoip.Service
-	weather *weather.Client
+	weather *weather.Service
 	l       zerolog.Logger
 }
 
-func New(g *geoip.Service, w *weather.Client, l zerolog.Logger) *Handler {
+func New(g *geoip.Service, w *weather.Service, l zerolog.Logger) *Handler {
 	return &Handler{
 		geoIP:   g,
 		weather: w,

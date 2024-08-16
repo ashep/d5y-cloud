@@ -13,11 +13,11 @@ import (
 type Response *weather.Data
 
 type Handler struct {
-	weather *weather.Client
+	weather *weather.Service
 	l       zerolog.Logger
 }
 
-func New(weatherCli *weather.Client, l zerolog.Logger) *Handler {
+func New(weatherCli *weather.Service, l zerolog.Logger) *Handler {
 	return &Handler{
 		weather: weatherCli,
 		l:       l,

@@ -10,7 +10,7 @@ import (
 	"github.com/ashep/d5y/internal/httpcli"
 )
 
-type Client struct {
+type Service struct {
 	c      *httpcli.Client
 	apiKey string
 }
@@ -46,14 +46,14 @@ type wAPIResp struct {
 	Current wAPIRespCurrent `json:"current"`
 }
 
-func New(apiKey string) *Client {
-	return &Client{
+func New(apiKey string) *Service {
+	return &Service{
 		c:      httpcli.New(),
 		apiKey: apiKey,
 	}
 }
 
-func (c *Client) GetForIPAddr(addr string) (*Data, error) {
+func (c *Service) GetForIPAddr(addr string) (*Data, error) {
 	if c.apiKey == "" {
 		return nil, fmt.Errorf("empty weather api key")
 	}

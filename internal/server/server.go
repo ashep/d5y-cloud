@@ -11,11 +11,11 @@ import (
 	"github.com/ashep/d5y/internal/geoip"
 	"github.com/ashep/d5y/internal/httplog"
 	"github.com/ashep/d5y/internal/remoteaddr"
+	handlerNotFound "github.com/ashep/d5y/internal/rpc/notfound"
+	handlerV1 "github.com/ashep/d5y/internal/rpc/v1"
+	handlerV2 "github.com/ashep/d5y/internal/rpc/v2"
+	"github.com/ashep/d5y/internal/update"
 	"github.com/ashep/d5y/internal/weather"
-
-	handlerNotFound "github.com/ashep/d5y/internal/api/notfound"
-	handlerV1 "github.com/ashep/d5y/internal/api/v1"
-	handlerV2 "github.com/ashep/d5y/internal/api/v2"
 )
 
 type Server struct {
@@ -23,24 +23,28 @@ type Server struct {
 	l zerolog.Logger
 }
 
-func New(addr, weatherAPIKey string, l zerolog.Logger) *Server {
+func New(
+	addr string,
+	giSvc *geoip.Service,
+	wthSvc *weather.Service,
+	updSvc *update.Service,
+	l zerolog.Logger,
+) *Server {
 	mux := http.NewServeMux()
 
-	geoIPSvc := geoip.New()
-	weatherSvc := weather.New(weatherAPIKey)
-
 	lv1 := l.With().Str("pkg", "v1_handler").Logger()
-	hv1 := handlerV1.New(geoIPSvc, weatherSvc, l)
-	mux.HandleFunc("/api/1", wrapMiddlewares(hv1.Handle, geoIPSvc, lv1)) // BC
+	hv1 := handlerV1.New(giSvc, wthSvc, l)
+	mux.HandleFunc("/api/1", wrapMiddlewares(hv1.Handle, giSvc, lv1)) // BC
 
 	lv2 := l.With().Str("pkg", "v2_handler").Logger()
-	hv2 := handlerV2.New(geoIPSvc, weatherSvc, lv2)
-	mux.Handle("/v2/time", wrapMiddlewares(hv2.HandleTime, geoIPSvc, lv2))
-	mux.Handle("/v2/weather", wrapMiddlewares(hv2.HandleWeather, geoIPSvc, lv2))
+	hv2 := handlerV2.New(giSvc, wthSvc, updSvc, lv2)
+	mux.Handle("/v2/time", wrapMiddlewares(hv2.HandleTime, giSvc, lv2))
+	mux.Handle("/v2/weather", wrapMiddlewares(hv2.HandleWeather, giSvc, lv2))
+	mux.Handle("/v2/firmware/update", wrapMiddlewares(hv2.HandleUpdate, giSvc, lv2))
 
 	l404 := l.With().Str("pkg", "not_found_handler").Logger()
 	h404 := handlerNotFound.New(l404)
-	mux.HandleFunc("/", wrapMiddlewares(h404.Handle, geoIPSvc, l404))
+	mux.HandleFunc("/", wrapMiddlewares(h404.Handle, giSvc, l404))
 
 	return &Server{
 		s: &http.Server{

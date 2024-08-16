@@ -6,9 +6,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/go-github/v63/github"
 	"github.com/rs/zerolog"
 
+	"github.com/ashep/d5y/internal/geoip"
 	"github.com/ashep/d5y/internal/server"
+	"github.com/ashep/d5y/internal/update"
+	"github.com/ashep/d5y/internal/weather"
 )
 
 type App struct {
@@ -28,8 +32,12 @@ func New(cfg Config, l zerolog.Logger) *App {
 }
 
 func (a *App) Run(ctx context.Context, _ []string) error {
-	s := server.New(a.cfg.Server.Addr, a.cfg.Weather.APIKey, a.l)
+	giSvc := geoip.New()
+	wthSvc := weather.New(a.cfg.Weather.APIKey)
+	ghCli := github.NewClient(http.DefaultClient).WithAuthToken(a.cfg.GitHub.Token)
+	updSvc := update.New(ghCli, a.l.With().Str("pkg", "update_svc").Logger())
 
+	s := server.New(a.cfg.Server.Addr, giSvc, wthSvc, updSvc, a.l)
 	done := make(chan struct{})
 
 	go func() {
