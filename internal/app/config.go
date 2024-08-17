@@ -1,7 +1,7 @@
 package app
 
 type ServerConfig struct {
-	Addr string `envconfig:"SERVER_ADDR" default:":9000"`
+	Addr string `default:":9000"`
 }
 
 type WeatherConfig struct {
@@ -9,7 +9,7 @@ type WeatherConfig struct {
 }
 
 type GitHubConfig struct {
-	Token string `envconfig:"GITHUB_TOKEN"`
+	Token string
 }
 
 type Config struct {

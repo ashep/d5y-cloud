@@ -31,5 +31,5 @@ jobs:
       ssh_key: ${{ secrets.DEPLOY_SSH_KEY }}
       dotenv: |
         HTTP_PORT=${{ vars.DEPLOY_HTTP_PORT }}
-        WEATHER_APIKEY=${{ secrets.WEATHER_APIKEY }}
-        GITHUB_TOKEN=${{ secrets.GH_TOKEN }}
+        APP_WEATHER_APIKEY=${{ secrets.WEATHER_APIKEY }}
+        APP_GITHUB_TOKEN=${{ secrets.GH_TOKEN }}
