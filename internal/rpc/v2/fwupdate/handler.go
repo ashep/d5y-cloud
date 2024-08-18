@@ -65,6 +65,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 	rlsSet, err := h.updSvc.List(r.Context(), app, arch, hw)
 	if errors.Is(err, update.ErrAppNotFound) {
 		handlerutil.WriteNotFound(w, err.Error(), h.l)
+		h.l.Info().Str("result", "app not found").Msg("response")
 		return
 	} else if err != nil {
 		handlerutil.WriteInternalServerError(w, err, h.l)
@@ -74,6 +75,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 	rls := rlsSet.Next(ver)
 	if rls == nil || len(rls.Assets) == 0 {
 		handlerutil.WriteNotFound(w, "no update found", h.l)
+		h.l.Info().Str("result", "no update found").Msg("response")
 		return
 	}
 
