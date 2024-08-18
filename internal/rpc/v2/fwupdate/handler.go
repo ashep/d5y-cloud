@@ -81,16 +81,15 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 		return
 	}
 
-	finURL, err := getFinalURL(r.Context(), rls.Assets[0].URL)
-	if err != nil {
-		handlerutil.WriteInternalServerError(w, fmt.Errorf("get final url: %w", err), h.l)
+	w.Header().Set("Location", rls.Assets[0].URL)
+	w.WriteHeader(http.StatusFound)
+
+	if _, err := w.Write([]byte(rls.Assets[0].URL)); err != nil {
+		h.l.Error().Err(err).Msg("failed to write response")
 		return
 	}
 
-	w.Header().Set("Location", finURL)
-	w.WriteHeader(http.StatusFound)
-
-	h.l.Info().Str("location", finURL).Str("version", rls.Version.String()).Msg("response")
+	h.l.Info().Str("url", rls.Assets[0].URL).Str("version", rls.Version.String()).Msg("response")
 }
 
 // getFinalURL follows all redirects to find the effective URL.
