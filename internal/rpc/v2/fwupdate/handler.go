@@ -1,9 +1,7 @@
 package fwupdate
 
 import (
-	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/Masterminds/semver/v3"
@@ -90,25 +88,4 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 	}
 
 	h.l.Info().Str("url", rls.Assets[0].URL).Str("version", rls.Version.String()).Msg("response")
-}
-
-// getFinalURL follows all redirects to find the effective URL.
-func getFinalURL(ctx context.Context, s string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s, nil)
-	if err != nil {
-		return "", fmt.Errorf("new request: %w", err)
-	}
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("http get: %w", err)
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("http get: bad response status code: %d", res.StatusCode)
-	}
-
-	return res.Request.URL.String(), nil
 }
