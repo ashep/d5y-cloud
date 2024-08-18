@@ -4,4 +4,4 @@ import (
 	"errors"
 )
 
-var ErrProductNotFound = errors.New("product not found")
+var ErrAppNotFound = errors.New("app not found")

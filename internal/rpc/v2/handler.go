@@ -6,8 +6,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/geoip"
+	updateh "github.com/ashep/d5y/internal/rpc/v2/fwupdate"
 	timeh "github.com/ashep/d5y/internal/rpc/v2/time"
-	updateh "github.com/ashep/d5y/internal/rpc/v2/update"
 	weatherh "github.com/ashep/d5y/internal/rpc/v2/weather"
 	"github.com/ashep/d5y/internal/update"
 	"github.com/ashep/d5y/internal/weather"

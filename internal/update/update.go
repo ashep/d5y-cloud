@@ -15,7 +15,6 @@ import (
 
 type Asset struct {
 	Name string `json:"name"`
-	Arch string `json:"arch"`
 	URL  string `json:"url"`
 }
 
@@ -28,33 +27,13 @@ type ReleaseSet []Release
 
 // Next returns the release which version number is after v.
 func (r ReleaseSet) Next(v *semver.Version) *Release {
-	if len(r) == 0 {
-		return nil
-	}
-
-	if len(r) == 1 {
-		return &r[0]
-	}
-
-	if v.Equal(semver.MustParse("0.0.0")) {
-		return &r[0]
-	}
-
-	curIdx := -1
-
 	for i, rl := range r {
-		if rl.Version.Equal(v) {
-			curIdx = i
-			break
+		if rl.Version.GreaterThan(v) {
+			return &r[i]
 		}
 	}
 
-	// No version found, or it's the last version
-	if curIdx == -1 || curIdx == len(r)-1 {
-		return nil
-	}
-
-	return &r[curIdx+1]
+	return nil
 }
 
 type Service struct {
@@ -69,15 +48,19 @@ func New(gh *github.Client, l zerolog.Logger) *Service {
 	}
 }
 
-func (s *Service) List(ctx context.Context, prod, arch string) (ReleaseSet, error) {
+func (s *Service) List(ctx context.Context, app, arch, hw string) (ReleaseSet, error) {
 	res := make(ReleaseSet, 0)
 
+	app = strings.ToLower(app)
+	arch = strings.ToLower(arch)
+	hw = strings.ToLower(hw)
+
 	for page := 1; ; page++ {
-		rsp, _, err := s.gh.Repositories.ListReleases(ctx, "ashep", prod, &github.ListOptions{Page: page})
+		rsp, _, err := s.gh.Repositories.ListReleases(ctx, "ashep", app, &github.ListOptions{Page: page})
 
 		ghErr := &github.ErrorResponse{}
 		if errors.As(err, &ghErr) && ghErr.Response.StatusCode == http.StatusNotFound {
-			return ReleaseSet{}, ErrProductNotFound
+			return ReleaseSet{}, ErrAppNotFound
 		} else if err != nil {
 			return nil, fmt.Errorf("gitbhub: list releases: %w", err)
 		}
@@ -85,6 +68,8 @@ func (s *Service) List(ctx context.Context, prod, arch string) (ReleaseSet, erro
 		if len(rsp) == 0 {
 			break
 		}
+
+		assetName := fmt.Sprintf("%s-%s-%s", app, arch, hw)
 
 		for _, ghRel := range rsp {
 			ver, err := semver.NewVersion(*ghRel.TagName)
@@ -99,13 +84,12 @@ func (s *Service) List(ctx context.Context, prod, arch string) (ReleaseSet, erro
 			}
 
 			for _, ast := range ghRel.Assets {
-				if !strings.Contains(*ast.Name, arch) {
+				if !strings.Contains(*ast.Name, assetName) {
 					continue
 				}
 
 				rel.Assets = append(rel.Assets, Asset{
 					Name: *ast.Name,
-					Arch: arch,
 					URL:  *ast.BrowserDownloadURL,
 				})
 			}
