@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"slices"
 	"strings"
@@ -14,8 +15,10 @@ import (
 )
 
 type Asset struct {
-	Name string `json:"name"`
-	URL  string `json:"url"`
+	Name   string `json:"name"`
+	Size   int    `json:"size"`
+	SHA256 string `json:"sha256"`
+	URL    string `json:"url"`
 }
 
 type Release struct {
@@ -37,14 +40,16 @@ func (r ReleaseSet) Next(v *semver.Version) *Release {
 }
 
 type Service struct {
-	gh *github.Client
-	l  zerolog.Logger
+	gh            *github.Client
+	checkSumCache map[string]string
+	l             zerolog.Logger
 }
 
 func New(gh *github.Client, l zerolog.Logger) *Service {
 	return &Service{
-		gh: gh,
-		l:  l,
+		gh:            gh,
+		checkSumCache: make(map[string]string),
+		l:             l,
 	}
 }
 
@@ -55,8 +60,13 @@ func (s *Service) List(ctx context.Context, app, arch, hw string) (ReleaseSet, e
 	arch = strings.ToLower(arch)
 	hw = strings.ToLower(hw)
 
+	appS := strings.Split(app, ".")
+	if len(appS) != 2 {
+		return res, errors.New("invalid app name")
+	}
+
 	for page := 1; ; page++ {
-		rsp, _, err := s.gh.Repositories.ListReleases(ctx, "ashep", app, &github.ListOptions{Page: page})
+		rsp, _, err := s.gh.Repositories.ListReleases(ctx, appS[0], appS[1], &github.ListOptions{Page: page})
 
 		ghErr := &github.ErrorResponse{}
 		if errors.As(err, &ghErr) && ghErr.Response.StatusCode == http.StatusNotFound {
@@ -69,10 +79,10 @@ func (s *Service) List(ctx context.Context, app, arch, hw string) (ReleaseSet, e
 			break
 		}
 
-		assetName := fmt.Sprintf("%s-%s-%s", app, arch, hw)
+		assetName := fmt.Sprintf("%s-%s-%s", appS[1], arch, hw)
 
 		for _, ghRel := range rsp {
-			ver, err := semver.NewVersion(*ghRel.TagName)
+			ver, err := semver.NewVersion(ghRel.GetTagName())
 			if err != nil {
 				s.l.Error().Err(err).Msg("failed to parse a version from GitHub tag name")
 				continue
@@ -84,13 +94,19 @@ func (s *Service) List(ctx context.Context, app, arch, hw string) (ReleaseSet, e
 			}
 
 			for _, ast := range ghRel.Assets {
-				if !strings.Contains(*ast.Name, assetName) {
+				if !strings.Contains(ast.GetName(), assetName) {
+					continue
+				}
+
+				if strings.HasSuffix(ast.GetName(), ".sha256") {
 					continue
 				}
 
 				rel.Assets = append(rel.Assets, Asset{
-					Name: *ast.Name,
-					URL:  *ast.BrowserDownloadURL,
+					Name:   ast.GetName(),
+					Size:   ast.GetSize(),
+					SHA256: s.assetChecksum(ctx, ast.GetBrowserDownloadURL()),
+					URL:    ast.GetBrowserDownloadURL(),
 				})
 			}
 
@@ -103,4 +119,47 @@ func (s *Service) List(ctx context.Context, app, arch, hw string) (ReleaseSet, e
 	})
 
 	return res, nil
+}
+
+func (s *Service) assetChecksum(ctx context.Context, url string) string {
+	url += ".sha256"
+
+	if v, ok := s.checkSumCache[url]; ok {
+		return v
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		s.l.Error().Err(err).Msg("failed to create a request for asset checksum")
+		return ""
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		s.l.Error().Err(err).Str("url", url).Msg("failed to fetch asset checksum")
+		return ""
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		s.l.Error().Str("url", url).Int("code", res.StatusCode).Msg("asset checksum not found")
+		return ""
+	}
+
+	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		s.l.Error().Err(err).Str("url", url).Msg("failed to read asset checksum")
+		return ""
+	}
+
+	if len(b) < 64 {
+		s.l.Error().Err(err).Str("url", url).Int("len", len(b)).Msg("asset checksum is too short")
+		return ""
+	}
+
+	v := string(b)[:64]
+	s.checkSumCache[url] = v
+
+	return v
 }

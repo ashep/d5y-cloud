@@ -1,6 +1,7 @@
 package fwupdate
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -79,10 +80,16 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 		return
 	}
 
+	b, err := json.Marshal(rls.Assets[0])
+	if err != nil {
+		handlerutil.WriteInternalServerError(w, err, h.l)
+		return
+	}
+
 	w.Header().Set("Location", rls.Assets[0].URL)
 	w.WriteHeader(http.StatusFound)
 
-	if _, err := w.Write([]byte(rls.Assets[0].URL)); err != nil {
+	if _, err := w.Write(b); err != nil {
 		h.l.Error().Err(err).Msg("failed to write response")
 		return
 	}
