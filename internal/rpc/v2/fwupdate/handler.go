@@ -93,8 +93,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 		return
 	}
 
-	w.Header().Set("Location", rls.Assets[0].URL)
-	w.WriteHeader(http.StatusFound)
+	w.WriteHeader(http.StatusOK)
 
 	if _, err := w.Write(b); err != nil {
 		h.l.Error().Err(err).Msg("failed to write response")
