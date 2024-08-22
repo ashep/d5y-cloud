@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/rs/zerolog"
@@ -38,6 +39,12 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 		return
 	}
 
+	appS := strings.Split(app, "/")
+	if len(appS) != 2 {
+		handlerutil.WriteBadRequest(w, "invalid app", h.l)
+		return
+	}
+
 	arch := q.Get("arch")
 	if arch == "" {
 		handlerutil.WriteBadRequest(w, "invalid arch", h.l)
@@ -61,7 +68,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 		return
 	}
 
-	rlsSet, err := h.updSvc.List(r.Context(), app, arch, hw)
+	rlsSet, err := h.updSvc.List(r.Context(), appS[0], appS[1], arch, hw)
 	if errors.Is(err, update.ErrAppNotFound) {
 		handlerutil.WriteNotFound(w, err.Error(), h.l)
 		h.l.Info().Str("result", "app not found").Msg("response")

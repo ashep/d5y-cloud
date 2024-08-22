@@ -53,20 +53,14 @@ func New(gh *github.Client, l zerolog.Logger) *Service {
 	}
 }
 
-func (s *Service) List(ctx context.Context, app, arch, hw string) (ReleaseSet, error) { //nolint:cyclop // ok
+func (s *Service) List(ctx context.Context, appOwner, appName, arch, hw string) (ReleaseSet, error) { //nolint:cyclop // ok
 	res := make(ReleaseSet, 0)
 
-	app = strings.ToLower(app)
 	arch = strings.ToLower(arch)
 	hw = strings.ToLower(hw)
 
-	appS := strings.Split(app, ".")
-	if len(appS) != 2 {
-		return res, errors.New("invalid app name")
-	}
-
 	for page := 1; ; page++ {
-		rsp, _, err := s.gh.Repositories.ListReleases(ctx, appS[0], appS[1], &github.ListOptions{Page: page})
+		rsp, _, err := s.gh.Repositories.ListReleases(ctx, appOwner, appName, &github.ListOptions{Page: page})
 
 		ghErr := &github.ErrorResponse{}
 		if errors.As(err, &ghErr) && ghErr.Response.StatusCode == http.StatusNotFound {
@@ -79,7 +73,7 @@ func (s *Service) List(ctx context.Context, app, arch, hw string) (ReleaseSet, e
 			break
 		}
 
-		assetName := fmt.Sprintf("%s-%s-%s", appS[1], arch, hw)
+		assetName := fmt.Sprintf("%s-%s-%s", appName, arch, hw)
 
 		for _, ghRel := range rsp {
 			ver, err := semver.NewVersion(ghRel.GetTagName())
