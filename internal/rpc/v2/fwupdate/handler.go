@@ -33,42 +33,27 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 
 	q := r.URL.Query()
 
-	app := q.Get("app")
-	if app == "" {
+	appQ := q.Get("app")
+	if appQ == "" {
 		handlerutil.WriteBadRequest(w, "invalid app", h.l)
 		return
 	}
 
-	appS := strings.Split(app, "/")
-	if len(appS) != 2 {
+	appS := strings.Split(appQ, ":")
+	if len(appS) != 4 {
 		handlerutil.WriteBadRequest(w, "invalid app", h.l)
 		return
 	}
 
-	arch := q.Get("arch")
-	if arch == "" {
-		handlerutil.WriteBadRequest(w, "invalid arch", h.l)
-		return
-	}
+	allowAlpha := q.Get("alpha") == "1"
 
-	hw := q.Get("hw")
-	if hw == "" {
-		handlerutil.WriteBadRequest(w, "invalid hw", h.l)
-		return
-	}
-
-	qVer := q.Get("ver")
-	if qVer == "" {
-		qVer = "0.0.0"
-	}
-
-	ver, err := semver.NewVersion(qVer)
+	ver, err := semver.NewVersion(appS[2])
 	if err != nil {
 		handlerutil.WriteBadRequest(w, "invalid version", h.l)
 		return
 	}
 
-	rlsSet, err := h.updSvc.List(r.Context(), appS[0], appS[1], arch, hw)
+	rlsSet, err := h.updSvc.List(r.Context(), appS[0], appS[1], appS[2], allowAlpha)
 	if errors.Is(err, update.ErrAppNotFound) {
 		handlerutil.WriteNotFound(w, err.Error(), h.l)
 		h.l.Info().Str("result", "app not found").Msg("response")

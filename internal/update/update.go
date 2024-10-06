@@ -53,11 +53,16 @@ func New(gh *github.Client, l zerolog.Logger) *Service {
 	}
 }
 
-func (s *Service) List(ctx context.Context, appOwner, appName, arch, hw string) (ReleaseSet, error) { //nolint:cyclop // ok
+func (s *Service) List(
+	ctx context.Context,
+	appOwner,
+	appName,
+	arch string,
+	allowAlpha bool,
+) (ReleaseSet, error) { //nolint:cyclop // ok
 	res := make(ReleaseSet, 0)
 
 	arch = strings.ToLower(arch)
-	hw = strings.ToLower(hw)
 
 	for page := 1; ; page++ {
 		rsp, _, err := s.gh.Repositories.ListReleases(ctx, appOwner, appName, &github.ListOptions{Page: page})
@@ -73,7 +78,7 @@ func (s *Service) List(ctx context.Context, appOwner, appName, arch, hw string) 
 			break
 		}
 
-		assetName := fmt.Sprintf("%s-%s-%s", appName, arch, hw)
+		assetName := fmt.Sprintf("%s-%s", appName, arch)
 
 		for _, ghRel := range rsp {
 			ver, err := semver.NewVersion(ghRel.GetTagName())
@@ -89,6 +94,10 @@ func (s *Service) List(ctx context.Context, appOwner, appName, arch, hw string) 
 
 			for _, ast := range ghRel.Assets {
 				if !strings.Contains(ast.GetName(), assetName) {
+					continue
+				}
+
+				if strings.Contains(ast.GetName(), "-alpha") && !allowAlpha {
 					continue
 				}
 
