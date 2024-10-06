@@ -53,13 +53,13 @@ func New(gh *github.Client, l zerolog.Logger) *Service {
 	}
 }
 
-func (s *Service) List(
+func (s *Service) List( //nolint:cyclop // ok
 	ctx context.Context,
 	appOwner,
 	appName,
 	arch string,
 	allowAlpha bool,
-) (ReleaseSet, error) { //nolint:cyclop // ok
+) (ReleaseSet, error) {
 	res := make(ReleaseSet, 0)
 
 	arch = strings.ToLower(arch)
