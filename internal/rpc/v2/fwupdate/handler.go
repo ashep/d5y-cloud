@@ -47,8 +47,9 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 
 	allowAlpha := q.Get("alpha") == "1"
 
-	ver, err := semver.NewVersion(appS[2])
+	ver, err := semver.NewVersion(appS[3])
 	if err != nil {
+		h.l.Warn().Err(err).Str("version", appS[3]).Msg("parse app version failed")
 		handlerutil.WriteBadRequest(w, "invalid version", h.l)
 		return
 	}
