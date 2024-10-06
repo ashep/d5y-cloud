@@ -105,5 +105,5 @@ linters:
     - wastedassign
     - whitespace
     #    - wrapcheck
-    - wsl
+    #    - wsl
     - zerologlint
