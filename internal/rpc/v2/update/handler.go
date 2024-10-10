@@ -1,4 +1,4 @@
-package fwupdate
+package update
 
 import (
 	"encoding/json"
@@ -45,8 +45,6 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 		return
 	}
 
-	allowAlpha := q.Get("alpha") == "1"
-
 	ver, err := semver.NewVersion(appS[3])
 	if err != nil {
 		h.l.Warn().Err(err).Str("version", appS[3]).Msg("parse app version failed")
@@ -54,7 +52,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 		return
 	}
 
-	rlsSet, err := h.updSvc.List(r.Context(), appS[0], appS[1], appS[2], allowAlpha)
+	rlsSet, err := h.updSvc.List(r.Context(), appS[0], appS[1], appS[2], q.Get("to_alpha") != "0")
 	if errors.Is(err, update.ErrAppNotFound) {
 		handlerutil.WriteNotFound(w, err.Error(), h.l)
 		h.l.Info().Str("result", "app not found").Msg("response")

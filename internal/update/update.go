@@ -53,19 +53,24 @@ func New(gh *github.Client, l zerolog.Logger) *Service {
 	}
 }
 
+// List returns all available assets for all releases sorted by version in ascending order.
+//
+// Only assets named `{name}-{arch}*` are returned.
+//
+// `incAlpha` arg controls whether assets named `*-alpha*` are returned.
 func (s *Service) List( //nolint:cyclop // ok
 	ctx context.Context,
-	appOwner,
-	appName,
+	owner string,
+	name string,
 	arch string,
-	allowAlpha bool,
+	incAlpha bool,
 ) (ReleaseSet, error) {
 	res := make(ReleaseSet, 0)
 
 	arch = strings.ToLower(arch)
 
 	for page := 1; ; page++ {
-		rsp, _, err := s.gh.Repositories.ListReleases(ctx, appOwner, appName, &github.ListOptions{Page: page})
+		rsp, _, err := s.gh.Repositories.ListReleases(ctx, owner, name, &github.ListOptions{Page: page})
 
 		ghErr := &github.ErrorResponse{}
 		if errors.As(err, &ghErr) && ghErr.Response.StatusCode == http.StatusNotFound {
@@ -78,7 +83,7 @@ func (s *Service) List( //nolint:cyclop // ok
 			break
 		}
 
-		assetName := fmt.Sprintf("%s-%s", appName, arch)
+		assetName := fmt.Sprintf("%s-%s", name, arch)
 
 		for _, ghRel := range rsp {
 			ver, err := semver.NewVersion(ghRel.GetTagName())
@@ -93,11 +98,11 @@ func (s *Service) List( //nolint:cyclop // ok
 			}
 
 			for _, ast := range ghRel.Assets {
-				if !strings.Contains(ast.GetName(), assetName) {
+				if !strings.HasPrefix(ast.GetName(), assetName) {
 					continue
 				}
 
-				if strings.Contains(ast.GetName(), "-alpha") && !allowAlpha {
+				if strings.Contains(ast.GetName(), "-alpha") && !incAlpha {
 					continue
 				}
 
