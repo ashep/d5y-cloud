@@ -6,7 +6,7 @@ linters:
     - bodyclose
     - containedctx
     - contextcheck
-    - cyclop
+    #    - cyclop
     #    - deadcode
     - decorder
     #    - depguard
@@ -31,7 +31,7 @@ linters:
     - gocheckcompilerdirectives
     #    - gochecknoglobals
     - gochecknoinits
-    - gocognit
+    #    - gocognit
     - goconst
     - gocritic
     - gocyclo

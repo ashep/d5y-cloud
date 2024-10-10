@@ -58,9 +58,6 @@ func New(gh *github.Client, l zerolog.Logger) *Service {
 // Only assets named `{name}-{arch}*` are returned.
 //
 // `incAlpha` arg controls whether assets named `*-alpha*` are returned.
-//
-//nolint:cyclop // ok
-//nolint:gocognit // ok
 func (s *Service) List(
 	ctx context.Context,
 	repoOwner string,
