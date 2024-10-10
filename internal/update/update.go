@@ -60,17 +60,17 @@ func New(gh *github.Client, l zerolog.Logger) *Service {
 // `incAlpha` arg controls whether assets named `*-alpha*` are returned.
 func (s *Service) List( //nolint:cyclop // ok
 	ctx context.Context,
-	owner string,
-	name string,
+	repoOwner string,
+	repoName string,
 	arch string,
 	incAlpha bool,
 ) (ReleaseSet, error) {
 	res := make(ReleaseSet, 0)
 
-	arch = strings.ToLower(arch)
+	arch = strings.ReplaceAll(strings.ToLower(arch), "-", "_")
 
 	for page := 1; ; page++ {
-		rsp, _, err := s.gh.Repositories.ListReleases(ctx, owner, name, &github.ListOptions{Page: page})
+		rsp, _, err := s.gh.Repositories.ListReleases(ctx, repoOwner, repoName, &github.ListOptions{Page: page})
 
 		ghErr := &github.ErrorResponse{}
 		if errors.As(err, &ghErr) && ghErr.Response.StatusCode == http.StatusNotFound {
@@ -83,12 +83,19 @@ func (s *Service) List( //nolint:cyclop // ok
 			break
 		}
 
-		assetName := fmt.Sprintf("%s-%s", name, arch)
-
 		for _, ghRel := range rsp {
+			s.l.Debug().
+				Str("repo", repoOwner+"/"+repoName).
+				Str("tag_name", ghRel.GetTagName()).
+				Msg("found release tag")
+
 			ver, err := semver.NewVersion(ghRel.GetTagName())
 			if err != nil {
-				s.l.Error().Err(err).Msg("failed to parse a version from GitHub tag name")
+				s.l.Error().
+					Str("repo", repoOwner+"/"+repoName).
+					Str("tag_name", ghRel.GetTagName()).
+					Err(err).
+					Msg("failed to parse a version from GitHub tag name")
 				continue
 			}
 
@@ -98,23 +105,49 @@ func (s *Service) List( //nolint:cyclop // ok
 			}
 
 			for _, ast := range ghRel.Assets {
-				if !strings.HasPrefix(ast.GetName(), assetName) {
-					continue
-				}
-
-				if strings.Contains(ast.GetName(), "-alpha") && !incAlpha {
-					continue
-				}
-
 				if strings.HasSuffix(ast.GetName(), ".sha256") {
 					continue
 				}
 
+				if !strings.HasPrefix(ast.GetName(), repoName) {
+					s.l.Debug().
+						Str("repo", repoOwner+"/"+repoName).
+						Str("tag_name", ghRel.GetTagName()).
+						Str("asset_name", ast.GetName()).
+						Msg("skip asset: name does not match app")
+					continue
+				}
+
+				if !strings.Contains(ast.GetName(), arch) {
+					s.l.Debug().
+						Str("repo", repoOwner+"/"+repoName).
+						Str("tag_name", ghRel.GetTagName()).
+						Str("asset_name", ast.GetName()).
+						Str("arch", arch).
+						Msg("skip asset: name does not match arch")
+					continue
+				}
+
+				if strings.Contains(ast.GetName(), "-alpha") && !incAlpha {
+					s.l.Debug().
+						Str("repo", repoOwner+"/"+repoName).
+						Str("tag_name", ghRel.GetTagName()).
+						Str("asset_name", ast.GetName()).
+						Msg("skip asset: alpha releases is not allowed")
+					continue
+				}
+
+				s.l.Debug().
+					Str("repo", repoOwner+"/"+repoName).
+					Str("tag_name", ghRel.GetTagName()).
+					Str("asset_name", ast.GetName()).
+					Msg("found asset")
+
 				rel.Assets = append(rel.Assets, Asset{
-					Name:   ast.GetName(),
-					Size:   ast.GetSize(),
-					SHA256: s.assetChecksum(ctx, ast.GetBrowserDownloadURL()),
-					URL:    ast.GetBrowserDownloadURL(),
+					Name: ast.GetName(),
+					Size: ast.GetSize(),
+					// SHA256: s.assetChecksum(ctx, ast.GetBrowserDownloadURL()),
+					URL: ast.GetBrowserDownloadURL(),
 				})
 			}
 
