@@ -24,7 +24,6 @@ func WrapHTTP(next http.HandlerFunc) http.HandlerFunc {
 
 func TokenFromCtx(ctx context.Context) string {
 	tok, ok := ctx.Value(ctxKey).(string)
-
 	if !ok {
 		return ""
 	}
