@@ -58,7 +58,10 @@ func New(gh *github.Client, l zerolog.Logger) *Service {
 // Only assets named `{name}-{arch}*` are returned.
 //
 // `incAlpha` arg controls whether assets named `*-alpha*` are returned.
-func (s *Service) List( //nolint:cyclop // ok
+//
+//nolint:cyclop // ok
+//nolint:gocognit // ok
+func (s *Service) List(
 	ctx context.Context,
 	repoOwner string,
 	repoName string,
@@ -144,10 +147,10 @@ func (s *Service) List( //nolint:cyclop // ok
 					Msg("found asset")
 
 				rel.Assets = append(rel.Assets, Asset{
-					Name: ast.GetName(),
-					Size: ast.GetSize(),
-					// SHA256: s.assetChecksum(ctx, ast.GetBrowserDownloadURL()),
-					URL: ast.GetBrowserDownloadURL(),
+					Name:   ast.GetName(),
+					Size:   ast.GetSize(),
+					SHA256: s.assetChecksum(ctx, ast.GetBrowserDownloadURL()),
+					URL:    ast.GetBrowserDownloadURL(),
 				})
 			}
 
