@@ -25,7 +25,6 @@ func WrapHTTP(next http.HandlerFunc, svc *Service, l zerolog.Logger) http.Handle
 		if err != nil {
 			l.Error().Err(err).Msg("get geoip data failed")
 			next.ServeHTTP(w, r)
-
 			return
 		}
 

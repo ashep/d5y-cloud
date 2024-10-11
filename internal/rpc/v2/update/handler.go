@@ -9,7 +9,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/rs/zerolog"
 
-	"github.com/ashep/d5y/internal/auth"
 	"github.com/ashep/d5y/internal/rpc/handlerutil"
 	"github.com/ashep/d5y/internal/update"
 )
@@ -55,10 +54,10 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 
 	toAlpha := q.Get("to_alpha")
 
-	l := h.l.With().
-		Str("client_id", auth.TokenFromCtx(r.Context())).
-		Str("app", appS[0]+"/"+appS[1]).
-		Str("arch", appS[2]).
+	l := handlerutil.ReqLogger(r, h.l).With().
+		Str("client_app_name", appS[0]+"/"+appS[1]).
+		Str("client_app", appS[2]).
+		Str("client_app_v", appS[3]).
 		Str("to_alpha", toAlpha).
 		Logger()
 
@@ -75,9 +74,15 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 	}
 
 	rls := rlsSet.Next(ver)
-	if rls == nil || len(rls.Assets) == 0 {
-		l.Warn().Str("reason", "no assets").Msg("no updates found")
+	if rls == nil {
+		l.Warn().Str("reason", "no release").Msg("no update found")
 		handlerutil.WriteNotFound(w, "no update found", l)
+		return
+	}
+
+	if len(rls.Assets) == 0 {
+		l.Warn().Str("reason", "no assets").Msg("no updates found")
+		handlerutil.WriteNotFound(w, "no updates found", l)
 		return
 	}
 

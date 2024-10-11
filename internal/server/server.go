@@ -34,17 +34,17 @@ func New(
 
 	logV1 := l.With().Str("pkg", "v1_handler").Logger()
 	ndlV1 := handlerV1.New(geoipSvc, wthSvc, l)
-	mux.HandleFunc("/api/1", wrapMiddlewares(ndlV1.Handle, geoipSvc, logV1)) // BC
+	mux.HandleFunc("/api/1", wrap(httplog.LogRequest(ndlV1.Handle, logV1), geoipSvc, logV1)) // BC
 
 	logV2 := l.With().Str("pkg", "v2_handler").Logger()
 	hdlV2 := handlerV2.New(geoipSvc, wthSvc, updSvc, logV2)
-	mux.Handle("/v2/time", wrapMiddlewares(hdlV2.HandleTime, geoipSvc, logV2))
-	mux.Handle("/v2/weather", wrapMiddlewares(hdlV2.HandleWeather, geoipSvc, logV2))
-	mux.Handle("/v2/firmware/update", wrapMiddlewares(hdlV2.HandleUpdate, geoipSvc, logV2))
+	mux.Handle("/v2/time", wrap(httplog.LogRequest(hdlV2.HandleTime, logV2), geoipSvc, logV2))
+	mux.Handle("/v2/weather", wrap(httplog.LogRequest(hdlV2.HandleWeather, logV2), geoipSvc, logV2))
+	mux.Handle("/v2/firmware/update", wrap(hdlV2.HandleUpdate, geoipSvc, logV2))
 
 	l404 := l.With().Str("pkg", "not_found_handler").Logger()
 	h404 := handlerNotFound.New(l404)
-	mux.HandleFunc("/", wrapMiddlewares(h404.Handle, geoipSvc, l404))
+	mux.HandleFunc("/", wrap(h404.Handle, geoipSvc, l404))
 
 	return &Server{
 		s: &http.Server{
@@ -72,11 +72,10 @@ func (s *Server) Shutdown(ctx context.Context) {
 	s.l.Info().Msg("server stopped")
 }
 
-func wrapMiddlewares(h http.HandlerFunc, geoIPSvc *geoip.Service, l zerolog.Logger) http.HandlerFunc {
-	h = httplog.LogRequest(h, l) // called last
+func wrap(h http.HandlerFunc, geoIPSvc *geoip.Service, l zerolog.Logger) http.HandlerFunc {
 	h = auth.WrapHTTP(h)
 	h = geoip.WrapHTTP(h, geoIPSvc, l)
-	h = remoteaddr.WrapHTTP(h) // called first
+	h = remoteaddr.WrapHTTP(h)
 
 	return h
 }
