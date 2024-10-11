@@ -9,6 +9,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/rs/zerolog"
 
+	"github.com/ashep/d5y/internal/auth"
 	"github.com/ashep/d5y/internal/rpc/handlerutil"
 	"github.com/ashep/d5y/internal/update"
 )
@@ -52,37 +53,49 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 		return
 	}
 
-	rlsSet, err := h.updSvc.List(r.Context(), appS[0], appS[1], appS[2], q.Get("to_alpha") != "0")
-	if errors.Is(err, update.ErrAppNotFound) {
-		handlerutil.WriteNotFound(w, err.Error(), h.l)
-		h.l.Info().Str("result", "app not found").Msg("response")
+	toAlpha := q.Get("to_alpha")
 
+	l := h.l.With().
+		Str("client_id", auth.TokenFromCtx(r.Context())).
+		Str("app", appS[0]+"/"+appS[1]).
+		Str("arch", appS[2]).
+		Str("to_alpha", toAlpha).
+		Logger()
+
+	l.Info().Msg("firmware update requested")
+
+	rlsSet, err := h.updSvc.List(r.Context(), appS[0], appS[1], appS[2], toAlpha != "0")
+	if errors.Is(err, update.ErrAppNotFound) {
+		l.Warn().Str("reason", "unknown app").Msg("no updates found")
+		handlerutil.WriteNotFound(w, err.Error(), l)
 		return
 	} else if err != nil {
-		handlerutil.WriteInternalServerError(w, err, h.l)
+		handlerutil.WriteInternalServerError(w, err, l)
 		return
 	}
 
 	rls := rlsSet.Next(ver)
 	if rls == nil || len(rls.Assets) == 0 {
-		handlerutil.WriteNotFound(w, "no update found", h.l)
-		h.l.Info().Str("result", "no update found").Msg("response")
-
+		l.Warn().Str("reason", "no assets").Msg("no updates found")
+		handlerutil.WriteNotFound(w, "no update found", l)
 		return
 	}
 
 	b, err := json.Marshal(rls.Assets[0])
 	if err != nil {
-		handlerutil.WriteInternalServerError(w, err, h.l)
+		handlerutil.WriteInternalServerError(w, err, l)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 
 	if _, err := w.Write(b); err != nil {
-		h.l.Error().Err(err).Msg("failed to write response")
+		l.Error().Err(err).Msg("failed to write response")
 		return
 	}
 
-	h.l.Info().Str("url", rls.Assets[0].URL).Str("version", rls.Version.String()).Msg("response")
+	l.Info().
+		Str("url", rls.Assets[0].URL).
+		Str("version", rls.Version.String()).
+		Msg("update found")
 }

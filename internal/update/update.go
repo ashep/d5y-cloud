@@ -184,7 +184,6 @@ func (s *Service) assetChecksum(ctx context.Context, url string) string {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		s.l.Error().Str("url", url).Int("code", res.StatusCode).Msg("asset checksum not found")
 		return ""
 	}
 
