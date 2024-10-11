@@ -65,7 +65,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 
 	rlsSet, err := h.updSvc.List(r.Context(), appS[0], appS[1], appS[2], toAlpha != "0")
 	if errors.Is(err, update.ErrAppNotFound) {
-		l.Warn().Str("reason", "unknown app").Msg("no updates found")
+		l.Warn().Str("reason", "unknown client app").Msg("no updates found")
 		handlerutil.WriteNotFound(w, err.Error(), l)
 		return
 	} else if err != nil {
@@ -75,14 +75,17 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 
 	rls := rlsSet.Next(ver)
 	if rls == nil {
-		l.Warn().Str("reason", "no release").Msg("no update found")
+		l.Info().Str("reason", "no next release").Msg("no firmware update found")
 		handlerutil.WriteNotFound(w, "no update found", l)
 		return
 	}
 
 	if len(rls.Assets) == 0 {
-		l.Warn().Str("reason", "no assets").Msg("no updates found")
-		handlerutil.WriteNotFound(w, "no updates found", l)
+		l.Warn().
+			Str("release", rls.Version.String()).
+			Str("reason", "no assets in the release").
+			Msg("no firmware update found")
+		handlerutil.WriteNotFound(w, "no firmware update found", l)
 		return
 	}
 
@@ -95,12 +98,12 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 	w.WriteHeader(http.StatusOK)
 
 	if _, err := w.Write(b); err != nil {
-		l.Error().Err(err).Msg("failed to write response")
+		l.Error().Err(err).Msg("failed to write firmware update response")
 		return
 	}
 
 	l.Info().
 		Str("url", rls.Assets[0].URL).
 		Str("version", rls.Version.String()).
-		Msg("update found")
+		Msg("firmware response update sent")
 }
