@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ashep/d5y/pkg/pmetrics"
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/remoteaddr"
@@ -24,38 +25,42 @@ func New(weatherCli *weather.Service, l zerolog.Logger) *Handler {
 	}
 }
 
-func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
-	rAddr := remoteaddr.FromCtx(r.Context())
-	if rAddr == "" {
-		h.l.Error().Msg("no remote addr in request context")
-		w.WriteHeader(http.StatusInternalServerError)
+func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
+	m := pmetrics.HTTPServerRequest(req)
 
+	rAddr := remoteaddr.FromCtx(req.Context())
+	if rAddr == "" {
+		m(http.StatusInternalServerError)
+		h.l.Error().Msg("no remote addr in request context")
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	d, err := h.weather.GetForIPAddr(rAddr)
 	if err != nil {
+		m(http.StatusInternalServerError)
 		h.l.Error().Err(err).Msg("weather get failed")
-		w.WriteHeader(http.StatusInternalServerError)
-
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	b, err := json.Marshal(d.Current)
 	if err != nil {
+		m(http.StatusInternalServerError)
 		h.l.Error().Err(err).Msg("response marshal error")
-		w.WriteHeader(http.StatusInternalServerError)
-
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
 
-	if _, err = w.Write(b); err != nil {
+	if _, err = rw.Write(b); err != nil {
+		m(http.StatusInternalServerError)
 		h.l.Error().Err(err).Msg("response write error")
 		return
 	}
 
+	m(http.StatusOK)
 	h.l.Info().RawJSON("data", b).Msg("response")
 }

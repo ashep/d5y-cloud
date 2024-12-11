@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ashep/d5y/pkg/pmetrics"
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/geoip"
@@ -30,24 +31,26 @@ func New(geoIPSvc *geoip.Service, l zerolog.Logger) *Handler {
 	}
 }
 
-func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
+	m := pmetrics.HTTPServerRequest(req)
+
 	res := &Response{
 		Value: time.Now().Unix(),
 	}
 
-	rAddr := remoteaddr.FromCtx(r.Context())
+	rAddr := remoteaddr.FromCtx(req.Context())
 	if rAddr == "" {
+		m(http.StatusInternalServerError)
 		h.l.Error().Msg("no remote addr in request context")
-		w.WriteHeader(http.StatusInternalServerError)
-
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	geo := geoip.FromCtx(r.Context())
+	geo := geoip.FromCtx(req.Context())
 	if geo == nil {
+		m(http.StatusInternalServerError)
 		h.l.Error().Msg("no geo ip data in request context")
-		w.WriteHeader(http.StatusInternalServerError)
-
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -56,19 +59,21 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	b, err := json.Marshal(res)
 	if err != nil {
+		m(http.StatusInternalServerError)
 		h.l.Error().Err(err).Msg("response marshal error")
-		w.WriteHeader(http.StatusInternalServerError)
-
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
 
-	if _, err = w.Write(b); err != nil {
+	if _, err = rw.Write(b); err != nil {
+		m(http.StatusInternalServerError)
 		h.l.Error().Err(err).Msg("response write error")
 		return
 	}
 
+	m(http.StatusOK)
 	h.l.Info().RawJSON("data", b).Msg("response")
 }

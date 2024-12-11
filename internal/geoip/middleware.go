@@ -9,9 +9,7 @@ import (
 	"github.com/ashep/d5y/internal/remoteaddr"
 )
 
-type ctxKeyType string
-
-const ctxKey ctxKeyType = "geoIP"
+type ctxKey struct{}
 
 func WrapHTTP(next http.HandlerFunc, svc *Service, l zerolog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -29,12 +27,12 @@ func WrapHTTP(next http.HandlerFunc, svc *Service, l zerolog.Logger) http.Handle
 			return
 		}
 
-		next.ServeHTTP(w, r.Clone(context.WithValue(r.Context(), ctxKey, data)))
+		next.ServeHTTP(w, r.Clone(context.WithValue(r.Context(), ctxKey{}, data)))
 	}
 }
 
 func FromCtx(ctx context.Context) *Data {
-	d, ok := ctx.Value(ctxKey).(*Data)
+	d, ok := ctx.Value(ctxKey{}).(*Data)
 	if !ok {
 		return nil
 	}

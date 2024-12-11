@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ashep/d5y/internal/httputil"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/auth"
 	"github.com/ashep/d5y/internal/geoip"
-	"github.com/ashep/d5y/internal/httplog"
 	"github.com/ashep/d5y/internal/remoteaddr"
 	handlerNotFound "github.com/ashep/d5y/internal/rpc/notfound"
 	handlerV1 "github.com/ashep/d5y/internal/rpc/v1"
@@ -31,6 +32,8 @@ func New(
 	l zerolog.Logger,
 ) *Server {
 	mux := http.NewServeMux()
+
+	mux.Handle("/metrics", promhttp.Handler())
 
 	lv1 := l.With().Str("pkg", "v1_handler").Logger()
 	hv1 := handlerV1.New(giSvc, wthSvc, l)
@@ -73,7 +76,8 @@ func (s *Server) Shutdown(ctx context.Context) {
 }
 
 func wrapMiddlewares(h http.HandlerFunc, geoIPSvc *geoip.Service, l zerolog.Logger) http.HandlerFunc {
-	h = httplog.LogRequest(h, l) // called last
+	h = httputil.ClientInfoMiddleware(h) // called last
+	h = httputil.LogRequestMiddleware(h, l)
 	h = auth.WrapHTTP(h)
 	h = geoip.WrapHTTP(h, geoIPSvc, l)
 	h = remoteaddr.WrapHTTP(h) // called first

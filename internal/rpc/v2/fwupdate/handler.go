@@ -7,9 +7,10 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/ashep/d5y/internal/httputil"
+	"github.com/ashep/d5y/pkg/pmetrics"
 	"github.com/rs/zerolog"
 
-	"github.com/ashep/d5y/internal/rpc/handlerutil"
 	"github.com/ashep/d5y/internal/update"
 )
 
@@ -25,35 +26,42 @@ func New(updSvc *update.Service, l zerolog.Logger) *Handler {
 	}
 }
 
-func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cyclop // later
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
+func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) { //nolint:cyclop // later
+	m := pmetrics.HTTPServerRequest(req)
+
+	if req.Method != http.MethodGet {
+		m(http.StatusMethodNotAllowed)
+		rw.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
-	q := r.URL.Query()
+	q := req.URL.Query()
 
 	app := q.Get("app")
 	if app == "" {
-		handlerutil.WriteBadRequest(w, "invalid app", h.l)
+		m(http.StatusBadRequest)
+		httputil.WriteBadRequest(rw, "invalid app", h.l)
 		return
 	}
 
 	appS := strings.Split(app, "/")
 	if len(appS) != 2 {
-		handlerutil.WriteBadRequest(w, "invalid app", h.l)
+		m(http.StatusBadRequest)
+		httputil.WriteBadRequest(rw, "invalid app", h.l)
 		return
 	}
 
 	arch := q.Get("arch")
 	if arch == "" {
-		handlerutil.WriteBadRequest(w, "invalid arch", h.l)
+		m(http.StatusBadRequest)
+		httputil.WriteBadRequest(rw, "invalid arch", h.l)
 		return
 	}
 
 	hw := q.Get("hw")
 	if hw == "" {
-		handlerutil.WriteBadRequest(w, "invalid hw", h.l)
+		m(http.StatusBadRequest)
+		httputil.WriteBadRequest(rw, "invalid hw", h.l)
 		return
 	}
 
@@ -64,41 +72,46 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) { //nolint:cycl
 
 	ver, err := semver.NewVersion(qVer)
 	if err != nil {
-		handlerutil.WriteBadRequest(w, "invalid version", h.l)
+		m(http.StatusBadRequest)
+		httputil.WriteBadRequest(rw, "invalid version", h.l)
 		return
 	}
 
-	rlsSet, err := h.updSvc.List(r.Context(), appS[0], appS[1], arch, hw)
+	rlsSet, err := h.updSvc.List(req.Context(), appS[0], appS[1], arch, hw)
 	if errors.Is(err, update.ErrAppNotFound) {
-		handlerutil.WriteNotFound(w, err.Error(), h.l)
+		m(http.StatusNotFound)
+		httputil.WriteNotFound(rw, err.Error(), h.l)
 		h.l.Info().Str("result", "app not found").Msg("response")
-
 		return
 	} else if err != nil {
-		handlerutil.WriteInternalServerError(w, err, h.l)
+		m(http.StatusInternalServerError)
+		httputil.WriteInternalServerError(rw, err, h.l)
 		return
 	}
 
 	rls := rlsSet.Next(ver)
 	if rls == nil || len(rls.Assets) == 0 {
-		handlerutil.WriteNotFound(w, "no update found", h.l)
+		m(http.StatusNotFound)
+		httputil.WriteNotFound(rw, "no update found", h.l)
 		h.l.Info().Str("result", "no update found").Msg("response")
-
 		return
 	}
 
 	b, err := json.Marshal(rls.Assets[0])
 	if err != nil {
-		handlerutil.WriteInternalServerError(w, err, h.l)
+		m(http.StatusInternalServerError)
+		httputil.WriteInternalServerError(rw, err, h.l)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	rw.WriteHeader(http.StatusOK)
 
-	if _, err := w.Write(b); err != nil {
+	if _, err := rw.Write(b); err != nil {
+		m(http.StatusInternalServerError)
 		h.l.Error().Err(err).Msg("failed to write response")
 		return
 	}
 
+	m(http.StatusOK)
 	h.l.Info().Str("url", rls.Assets[0].URL).Str("version", rls.Version.String()).Msg("response")
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ashep/d5y/pkg/pmetrics"
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/geoip"
@@ -40,27 +41,29 @@ func New(g *geoip.Service, w *weather.Service, l zerolog.Logger) *Handler {
 	}
 }
 
-func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" && r.URL.Path != "/api/1" {
-		h.l.Warn().Str("path", r.URL.Path).Msg("unexpected path")
-		w.WriteHeader(http.StatusNotFound)
+func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
+	m := pmetrics.HTTPServerRequest(req)
 
+	if req.URL.Path != "/" && req.URL.Path != "/api/1" {
+		m(http.StatusNotFound)
+		h.l.Warn().Str("path", req.URL.Path).Msg("unexpected path")
+		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	rAddr := remoteaddr.FromRequest(r)
+	rAddr := remoteaddr.FromRequest(req)
 	if rAddr == "" {
+		m(http.StatusInternalServerError)
 		h.l.Error().Msg("empty remote address")
-		w.WriteHeader(http.StatusInternalServerError)
-
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	geo := geoip.FromCtx(r.Context())
+	geo := geoip.FromCtx(req.Context())
 	if geo == nil {
+		m(http.StatusInternalServerError)
 		h.l.Warn().Msg("empty geo ip data")
-		w.WriteHeader(http.StatusInternalServerError)
-
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -99,18 +102,20 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
 
 	d, err := json.Marshal(resp)
 	if err != nil {
+		m(http.StatusInternalServerError)
 		h.l.Error().Err(err).Msg("response marshal failed")
-		w.WriteHeader(http.StatusInternalServerError)
-
+		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
 
-	if _, err = w.Write(d); err != nil {
+	if _, err = rw.Write(d); err != nil {
+		m(http.StatusInternalServerError)
 		h.l.Error().Err(err).Msg("response write failed")
 	}
 
+	m(http.StatusOK)
 	h.l.Info().RawJSON("data", d).Msg("response")
 }
