@@ -26,7 +26,7 @@ type Server struct {
 
 func New(
 	addr string,
-	giSvc *geoip.Service,
+	geoipSvc *geoip.Service,
 	wthSvc *weather.Service,
 	updSvc *update.Service,
 	l zerolog.Logger,
@@ -36,18 +36,18 @@ func New(
 	mux.Handle("/metrics", promhttp.Handler())
 
 	lv1 := l.With().Str("pkg", "v1_handler").Logger()
-	hv1 := handlerV1.New(giSvc, wthSvc, l)
-	mux.HandleFunc("/api/1", wrapMiddlewares(hv1.Handle, giSvc, lv1)) // BC
+	hv1 := handlerV1.New(geoipSvc, wthSvc, l)
+	mux.HandleFunc("/api/1", wrapMiddlewares(hv1.Handle, geoipSvc, lv1)) // BC
 
-	lv2 := l.With().Str("pkg", "v2_handler").Logger()
-	hv2 := handlerV2.New(giSvc, wthSvc, updSvc, lv2)
-	mux.Handle("/v2/time", wrapMiddlewares(hv2.HandleTime, giSvc, lv2))
-	mux.Handle("/v2/weather", wrapMiddlewares(hv2.HandleWeather, giSvc, lv2))
-	mux.Handle("/v2/firmware/update", wrapMiddlewares(hv2.HandleUpdate, giSvc, lv2))
+	logV2 := l.With().Str("pkg", "v2_handler").Logger()
+	hdlV2 := handlerV2.New(geoipSvc, wthSvc, updSvc, logV2)
+	mux.Handle("/v2/time", wrapMiddlewares(hdlV2.HandleTime, geoipSvc, logV2))
+	mux.Handle("/v2/weather", wrapMiddlewares(hdlV2.HandleWeather, geoipSvc, logV2))
+	mux.Handle("/v2/firmware/update", wrapMiddlewares(hdlV2.HandleUpdate, geoipSvc, logV2))
 
 	l404 := l.With().Str("pkg", "not_found_handler").Logger()
 	h404 := handlerNotFound.New(l404)
-	mux.HandleFunc("/", wrapMiddlewares(h404.Handle, giSvc, l404))
+	mux.HandleFunc("/", wrapMiddlewares(h404.Handle, geoipSvc, l404))
 
 	return &Server{
 		s: &http.Server{

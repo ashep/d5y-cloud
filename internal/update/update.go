@@ -53,14 +53,24 @@ func New(gh *github.Client, l zerolog.Logger) *Service {
 	}
 }
 
-func (s *Service) List(ctx context.Context, appOwner, appName, arch, hw string) (ReleaseSet, error) { //nolint:cyclop // ok
+// List returns all available assets for all releases sorted by version in ascending order.
+//
+// Only assets named `{name}-{arch}*` are returned.
+//
+// `incAlpha` arg controls whether assets named `*-alpha*` are returned.
+func (s *Service) List(
+	ctx context.Context,
+	repoOwner string,
+	repoName string,
+	arch string,
+	incAlpha bool,
+) (ReleaseSet, error) {
 	res := make(ReleaseSet, 0)
 
-	arch = strings.ToLower(arch)
-	hw = strings.ToLower(hw)
+	arch = strings.ReplaceAll(strings.ToLower(arch), "-", "_")
 
 	for page := 1; ; page++ {
-		rsp, _, err := s.gh.Repositories.ListReleases(ctx, appOwner, appName, &github.ListOptions{Page: page})
+		rsp, _, err := s.gh.Repositories.ListReleases(ctx, repoOwner, repoName, &github.ListOptions{Page: page})
 
 		ghErr := &github.ErrorResponse{}
 		if errors.As(err, &ghErr) && ghErr.Response.StatusCode == http.StatusNotFound {
@@ -73,12 +83,19 @@ func (s *Service) List(ctx context.Context, appOwner, appName, arch, hw string) 
 			break
 		}
 
-		assetName := fmt.Sprintf("%s-%s-%s", appName, arch, hw)
-
 		for _, ghRel := range rsp {
+			s.l.Debug().
+				Str("repo", repoOwner+"/"+repoName).
+				Str("tag_name", ghRel.GetTagName()).
+				Msg("found release tag")
+
 			ver, err := semver.NewVersion(ghRel.GetTagName())
 			if err != nil {
-				s.l.Error().Err(err).Msg("failed to parse a version from GitHub tag name")
+				s.l.Error().
+					Str("repo", repoOwner+"/"+repoName).
+					Str("tag_name", ghRel.GetTagName()).
+					Err(err).
+					Msg("failed to parse a version from GitHub tag name")
 				continue
 			}
 
@@ -88,13 +105,43 @@ func (s *Service) List(ctx context.Context, appOwner, appName, arch, hw string) 
 			}
 
 			for _, ast := range ghRel.Assets {
-				if !strings.Contains(ast.GetName(), assetName) {
-					continue
-				}
-
 				if strings.HasSuffix(ast.GetName(), ".sha256") {
 					continue
 				}
+
+				if !strings.HasPrefix(ast.GetName(), repoName) {
+					s.l.Debug().
+						Str("repo", repoOwner+"/"+repoName).
+						Str("tag_name", ghRel.GetTagName()).
+						Str("asset_name", ast.GetName()).
+						Msg("skip asset: name does not match app")
+					continue
+				}
+
+				if !strings.Contains(ast.GetName(), arch) {
+					s.l.Debug().
+						Str("repo", repoOwner+"/"+repoName).
+						Str("tag_name", ghRel.GetTagName()).
+						Str("asset_name", ast.GetName()).
+						Str("arch", arch).
+						Msg("skip asset: name does not match arch")
+					continue
+				}
+
+				if strings.Contains(ast.GetName(), "-alpha") && !incAlpha {
+					s.l.Debug().
+						Str("repo", repoOwner+"/"+repoName).
+						Str("tag_name", ghRel.GetTagName()).
+						Str("asset_name", ast.GetName()).
+						Msg("skip asset: alpha releases is not allowed")
+					continue
+				}
+
+				s.l.Debug().
+					Str("repo", repoOwner+"/"+repoName).
+					Str("tag_name", ghRel.GetTagName()).
+					Str("asset_name", ast.GetName()).
+					Msg("found asset")
 
 				rel.Assets = append(rel.Assets, Asset{
 					Name:   ast.GetName(),
@@ -137,7 +184,6 @@ func (s *Service) assetChecksum(ctx context.Context, url string) string {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		s.l.Error().Str("url", url).Int("code", res.StatusCode).Msg("asset checksum not found")
 		return ""
 	}
 
