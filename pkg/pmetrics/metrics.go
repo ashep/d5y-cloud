@@ -34,7 +34,7 @@ func HTTPServerRequest(req *http.Request) func(int) {
 	return func(statusCode int) {
 		labels["code"] = strconv.Itoa(statusCode)
 		cnt.With(labels).Inc()
-		dur.With(labels).Observe(time.Now().Sub(start).Seconds())
+		dur.With(labels).Observe(time.Since(start).Seconds())
 	}
 }
 
