@@ -9,7 +9,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/ashep/d5y/internal/httputil"
 	"github.com/ashep/d5y/internal/update"
-	"github.com/ashep/d5y/pkg/pmetrics"
+	"github.com/ashep/go-apprun/metrics"
 	"github.com/rs/zerolog"
 )
 
@@ -26,7 +26,7 @@ func New(updSvc *update.Service, l zerolog.Logger) *Handler {
 }
 
 func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) { //nolint:cyclop // later
-	m := pmetrics.HTTPServerRequest(req)
+	m := metrics.HTTPServerRequest(req, nil)
 
 	if req.Method != http.MethodGet {
 		m(http.StatusMethodNotAllowed)

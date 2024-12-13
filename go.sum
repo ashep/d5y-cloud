@@ -1,7 +1,11 @@
 github.com/Masterminds/semver/v3 v3.3.1 h1:QtNSWtVZ3nBfk8mAOu/B6v7FMJ+NHTIgUPi7rj+4nv4=
 github.com/Masterminds/semver/v3 v3.3.1/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
-github.com/ashep/go-apprun v0.0.0-20240628094755-8c6a5422f370 h1:ntzPqSglMxckQ4WT4mW830FlLo5YebuaiDDezltFRlA=
-github.com/ashep/go-apprun v0.0.0-20240628094755-8c6a5422f370/go.mod h1:X15KrgRaoN5bsnWmIGLV5mbsxgoyWXS9k5MoOe+4jus=
+github.com/ashep/go-apprun v0.0.0-20241213231523-3e2c7660555f h1:iC2eM0+RqJES+bZcrtFj1R1H1yF/7Woiob1dolLOk3E=
+github.com/ashep/go-apprun v0.0.0-20241213231523-3e2c7660555f/go.mod h1:eQXw3SmPGgJf3LpouLbAhmXHu/ERuDE1d8VbwFpGYY8=
+github.com/ashep/go-apprun v0.0.0-20241213233439-1b4a8a9cff0d h1:miJ3mVSnbHv4646CUbTsYEZSkO9s8O/96GrmNcUvZEs=
+github.com/ashep/go-apprun v0.0.0-20241213233439-1b4a8a9cff0d/go.mod h1:eQXw3SmPGgJf3LpouLbAhmXHu/ERuDE1d8VbwFpGYY8=
+github.com/ashep/go-apprun v0.0.0-20241213234535-3d829b925074 h1:y3JzlfSljWJ5YnM7OAV0SQ26t58/BTrZAN6BoI/7FL4=
+github.com/ashep/go-apprun v0.0.0-20241213234535-3d829b925074/go.mod h1:eQXw3SmPGgJf3LpouLbAhmXHu/ERuDE1d8VbwFpGYY8=
 github.com/ashep/go-cfgloader v0.0.0-20230619185109-520db9a7c8a8 h1:efEFRcT0MS6HNekGCizxZOOmPaTIU6fsWFbNQdox1Ps=
 github.com/ashep/go-cfgloader v0.0.0-20230619185109-520db9a7c8a8/go.mod h1:pIbgYmBMgOzhOxVTxVegyyCGAzFKUcxf/uZ8alfCqFo=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
@@ -9,7 +13,6 @@ github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6r
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
-github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -39,7 +42,6 @@ github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWE
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
-github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=

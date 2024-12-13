@@ -3,7 +3,7 @@ package httputil
 import (
 	"net/http"
 
-	"github.com/ashep/d5y/pkg/pmetrics"
+	"github.com/ashep/go-apprun/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 
@@ -57,7 +57,7 @@ func ClientInfoMiddleware(next http.HandlerFunc) http.HandlerFunc {
 			labels["client_id"] = clientID
 		}
 
-		pmetrics.Counter("app_client_info", "D5Y Cloud clients.", labels).With(labels).Inc()
+		metrics.Counter("app_client_info", "D5Y Cloud clients.", labels).With(labels).Inc()
 
 		next.ServeHTTP(rw, req)
 	}

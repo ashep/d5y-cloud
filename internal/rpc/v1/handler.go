@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ashep/d5y/pkg/pmetrics"
+	"github.com/ashep/go-apprun/metrics"
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/geoip"
@@ -42,7 +42,7 @@ func New(g *geoip.Service, w *weather.Service, l zerolog.Logger) *Handler {
 }
 
 func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
-	m := pmetrics.HTTPServerRequest(req)
+	m := metrics.HTTPServerRequest(req, nil)
 
 	if req.URL.Path != "/" && req.URL.Path != "/api/1" {
 		m(http.StatusNotFound)

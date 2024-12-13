@@ -3,10 +3,8 @@ package server
 import (
 	"context"
 	"net/http"
-	"time"
 
 	"github.com/ashep/d5y/internal/httputil"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/auth"
@@ -24,17 +22,13 @@ type Server struct {
 	l zerolog.Logger
 }
 
-func New(
-	addr string,
+func Setup(
+	mux *http.ServeMux,
 	geoipSvc *geoip.Service,
 	wthSvc *weather.Service,
 	updSvc *update.Service,
 	l zerolog.Logger,
-) *Server {
-	mux := http.NewServeMux()
-
-	mux.Handle("/metrics", promhttp.Handler())
-
+) {
 	lv1 := l.With().Str("pkg", "v1_handler").Logger()
 	hv1 := handlerV1.New(geoipSvc, wthSvc, l)
 	mux.HandleFunc("/api/1", wrapMiddlewares(hv1.Handle, geoipSvc, lv1)) // BC
@@ -48,15 +42,6 @@ func New(
 	l404 := l.With().Str("pkg", "not_found_handler").Logger()
 	h404 := handlerNotFound.New(l404)
 	mux.HandleFunc("/", wrapMiddlewares(h404.Handle, geoipSvc, l404))
-
-	return &Server{
-		s: &http.Server{
-			Addr:        addr,
-			Handler:     mux,
-			ReadTimeout: time.Second * 5,
-		},
-		l: l,
-	}
 }
 
 func (s *Server) Run() error {
