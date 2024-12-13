@@ -12,8 +12,7 @@ import (
 	"github.com/google/go-github/v63/github"
 )
 
-type App struct {
-}
+type App struct{}
 
 func New(cfg Config, rt *apprunner.Runtime) (apprunner.Runnable, error) {
 	giSvc := geoip.New()
