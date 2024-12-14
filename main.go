@@ -4,11 +4,11 @@ import (
 	_ "time/tzdata"
 
 	"github.com/ashep/d5y/internal/app"
-	"github.com/ashep/go-apprun/apprunner"
+	"github.com/ashep/go-app/runner"
 )
 
 func main() {
-	apprunner.New(app.Config{}, app.New).
+	runner.New(app.New, app.Config{}).
 		WithDefaultHTPServer().
 		WithMetricsHandler().
 		Run()

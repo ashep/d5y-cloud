@@ -8,13 +8,13 @@ import (
 	"github.com/ashep/d5y/internal/server"
 	"github.com/ashep/d5y/internal/update"
 	"github.com/ashep/d5y/internal/weather"
-	"github.com/ashep/go-apprun/apprunner"
+	"github.com/ashep/go-app/runner"
 	"github.com/google/go-github/v63/github"
 )
 
 type App struct{}
 
-func New(cfg Config, rt *apprunner.Runtime) (apprunner.Runnable, error) {
+func New(cfg Config, rt *runner.Runtime) (*App, error) {
 	giSvc := geoip.New()
 	wthSvc := weather.New(cfg.Weather.APIKey)
 	ghCli := github.NewClient(http.DefaultClient).WithAuthToken(cfg.GitHub.Token)
