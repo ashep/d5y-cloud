@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ashep/go-apprun/metrics"
+	"github.com/ashep/go-app/metrics"
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/geoip"
@@ -32,7 +32,7 @@ func New(geoIPSvc *geoip.Service, l zerolog.Logger) *Handler {
 }
 
 func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
-	m := metrics.HTTPServerRequest(req, nil)
+	m := metrics.HTTPServerRequest(req, "/v2/time")
 
 	res := &Response{
 		Value: time.Now().Unix(),

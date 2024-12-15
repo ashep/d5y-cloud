@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ashep/go-apprun/metrics"
+	"github.com/ashep/go-app/metrics"
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/geoip"
@@ -42,14 +42,13 @@ func New(g *geoip.Service, w *weather.Service, l zerolog.Logger) *Handler {
 }
 
 func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
-	m := metrics.HTTPServerRequest(req, nil)
-
 	if req.URL.Path != "/" && req.URL.Path != "/api/1" {
-		m(http.StatusNotFound)
 		h.l.Warn().Str("path", req.URL.Path).Msg("unexpected path")
 		rw.WriteHeader(http.StatusNotFound)
 		return
 	}
+
+	m := metrics.HTTPServerRequest(req, "/v1")
 
 	rAddr := remoteaddr.FromRequest(req)
 	if rAddr == "" {

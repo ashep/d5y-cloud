@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ashep/go-apprun/metrics"
+	"github.com/ashep/go-app/metrics"
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/remoteaddr"
@@ -26,7 +26,7 @@ func New(weatherCli *weather.Service, l zerolog.Logger) *Handler {
 }
 
 func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
-	m := metrics.HTTPServerRequest(req, nil)
+	m := metrics.HTTPServerRequest(req, "/v2/weather")
 
 	rAddr := remoteaddr.FromCtx(req.Context())
 	if rAddr == "" {

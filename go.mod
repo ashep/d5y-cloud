@@ -6,8 +6,7 @@ toolchain go1.23.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/ashep/go-app v0.0.0-20241214093823-d8fb97e98f13
-	github.com/ashep/go-apprun v0.0.0-20241213234535-3d829b925074
+	github.com/ashep/go-app v0.0.0-20241215122137-45dfba635c2c
 	github.com/google/go-github/v63 v63.0.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/rs/zerolog v1.33.0

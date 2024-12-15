@@ -2,8 +2,9 @@ package httputil
 
 import (
 	"net/http"
+	"strings"
 
-	"github.com/ashep/go-apprun/metrics"
+	"github.com/ashep/go-app/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 
@@ -43,9 +44,22 @@ func LogRequestMiddleware(next http.HandlerFunc, l zerolog.Logger) http.HandlerF
 func ClientInfoMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, req *http.Request) {
 		labels := prometheus.Labels{
-			"country":   "unknown",
-			"city":      "unknown",
-			"client_id": "unknown",
+			"country":         "",
+			"city":            "",
+			"client_id":       "",
+			"client_vendor":   "",
+			"client_name":     "",
+			"client_hardware": "",
+			"client_version":  "",
+		}
+
+		if ua := req.Header.Get("User-Agent"); ua != "" {
+			if uaSplit := strings.SplitN(ua, ":", 4); len(uaSplit) == 4 {
+				labels["client_vendor"] = uaSplit[0]
+				labels["client_name"] = uaSplit[1]
+				labels["client_hardware"] = uaSplit[2]
+				labels["client_version"] = uaSplit[3]
+			}
 		}
 
 		if geoIP := geoip.FromCtx(req.Context()); geoIP != nil {
