@@ -65,9 +65,7 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) { //nolint:c
 		return
 	}
 
-	toAlpha := q.Get("to_alpha")
-
-	rlsSet, err := h.updSvc.List(req.Context(), appS[0], appS[1], appS[2], toAlpha != "0")
+	rlsSet, err := h.updSvc.List(req.Context(), appS[0], appS[1], appS[2], q.Get("to_alpha") == "1")
 	if errors.Is(err, update.ErrAppNotFound) {
 		m(http.StatusNotFound)
 		l.Warn().Err(errors.New("unknown client app")).Msg("firmware update request failed")
