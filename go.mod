@@ -2,11 +2,9 @@ module github.com/ashep/d5y
 
 go 1.23
 
-toolchain go1.23.4
-
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/ashep/go-app v0.0.0-20241215122137-45dfba635c2c
+	github.com/ashep/go-app v0.0.0-20241225132939-f1cb1642029f
 	github.com/google/go-github/v63 v63.0.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/rs/zerolog v1.33.0

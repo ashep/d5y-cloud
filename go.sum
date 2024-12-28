@@ -2,6 +2,8 @@ github.com/Masterminds/semver/v3 v3.3.1 h1:QtNSWtVZ3nBfk8mAOu/B6v7FMJ+NHTIgUPi7r
 github.com/Masterminds/semver/v3 v3.3.1/go.mod h1:4V+yj/TJE1HU9XfppCwVMZq3I84lprf4nC11bSS5beM=
 github.com/ashep/go-app v0.0.0-20241215122137-45dfba635c2c h1:rhhoYLXxvJX4IOpo/LjK39YgYZhcDYBv6PBTvWxgPf8=
 github.com/ashep/go-app v0.0.0-20241215122137-45dfba635c2c/go.mod h1:7dW3H5vD486HxIOEt0aUsVq//3uzTtYClOaSRl9YE9o=
+github.com/ashep/go-app v0.0.0-20241225132939-f1cb1642029f h1:4sc1HjiE9JdCShZ+KIbuIro+YrK0zCBGeJ+IpPTpoNk=
+github.com/ashep/go-app v0.0.0-20241225132939-f1cb1642029f/go.mod h1:7dW3H5vD486HxIOEt0aUsVq//3uzTtYClOaSRl9YE9o=
 github.com/ashep/go-cfgloader v0.0.0-20230619185109-520db9a7c8a8 h1:efEFRcT0MS6HNekGCizxZOOmPaTIU6fsWFbNQdox1Ps=
 github.com/ashep/go-cfgloader v0.0.0-20230619185109-520db9a7c8a8/go.mod h1:pIbgYmBMgOzhOxVTxVegyyCGAzFKUcxf/uZ8alfCqFo=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
