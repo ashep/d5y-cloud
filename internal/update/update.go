@@ -84,16 +84,27 @@ func (s *Service) List(
 		}
 
 		for _, ghRel := range rsp {
+			repoFullName := repoOwner + "/" + repoName
+			tagName := ghRel.GetTagName()
+
 			s.l.Debug().
-				Str("repo", repoOwner+"/"+repoName).
-				Str("tag_name", ghRel.GetTagName()).
+				Str("repo", repoFullName).
+				Str("tag_name", tagName).
 				Msg("found release tag")
 
-			ver, err := semver.NewVersion(ghRel.GetTagName())
+			if strings.Contains(tagName, "-alpha") && !incAlpha {
+				s.l.Debug().
+					Str("repo", repoFullName).
+					Str("tag_name", tagName).
+					Msg("skip release: alpha releases is not allowed")
+				continue
+			}
+
+			ver, err := semver.NewVersion(tagName)
 			if err != nil {
 				s.l.Error().
-					Str("repo", repoOwner+"/"+repoName).
-					Str("tag_name", ghRel.GetTagName()).
+					Str("repo", repoFullName).
+					Str("tag_name", tagName).
 					Err(err).
 					Msg("failed to parse a version from GitHub tag name")
 				continue
@@ -111,8 +122,8 @@ func (s *Service) List(
 
 				if !strings.HasPrefix(ast.GetName(), repoName) {
 					s.l.Debug().
-						Str("repo", repoOwner+"/"+repoName).
-						Str("tag_name", ghRel.GetTagName()).
+						Str("repo", repoFullName).
+						Str("tag_name", tagName).
 						Str("asset_name", ast.GetName()).
 						Msg("skip asset: name does not match app")
 					continue
@@ -120,26 +131,17 @@ func (s *Service) List(
 
 				if !strings.Contains(ast.GetName(), arch) {
 					s.l.Debug().
-						Str("repo", repoOwner+"/"+repoName).
-						Str("tag_name", ghRel.GetTagName()).
+						Str("repo", repoFullName).
+						Str("tag_name", tagName).
 						Str("asset_name", ast.GetName()).
 						Str("arch", arch).
 						Msg("skip asset: name does not match arch")
 					continue
 				}
 
-				if strings.Contains(ast.GetName(), "-alpha") && !incAlpha {
-					s.l.Debug().
-						Str("repo", repoOwner+"/"+repoName).
-						Str("tag_name", ghRel.GetTagName()).
-						Str("asset_name", ast.GetName()).
-						Msg("skip asset: alpha releases is not allowed")
-					continue
-				}
-
 				s.l.Debug().
-					Str("repo", repoOwner+"/"+repoName).
-					Str("tag_name", ghRel.GetTagName()).
+					Str("repo", repoFullName).
+					Str("tag_name", tagName).
 					Str("asset_name", ast.GetName()).
 					Msg("found asset")
 
