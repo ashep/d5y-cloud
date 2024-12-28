@@ -52,7 +52,7 @@ func ReqLog(req *http.Request, l zerolog.Logger) zerolog.Logger {
 		Str("client_hardware", ci.Hardware).
 		Str("client_country", ci.Country).
 		Str("client_city", ci.City).
-		Str("client_timezone", ci.City)
+		Str("client_timezone", ci.Timezone)
 
 	return ll.Logger()
 }
