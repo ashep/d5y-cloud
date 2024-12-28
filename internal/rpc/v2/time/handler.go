@@ -2,14 +2,16 @@ package time
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/ashep/d5y/internal/rpc/rpcutil"
 	"github.com/ashep/go-app/metrics"
 	"github.com/rs/zerolog"
 
-	"github.com/ashep/d5y/internal/geoip"
-	"github.com/ashep/d5y/internal/remoteaddr"
+	"github.com/ashep/d5y/internal/clientinfo"
 	"github.com/ashep/d5y/internal/tz"
 )
 
@@ -20,47 +22,47 @@ type Response struct {
 }
 
 type Handler struct {
-	geoIP *geoip.Service
-	l     zerolog.Logger
+	l zerolog.Logger
 }
 
-func New(geoIPSvc *geoip.Service, l zerolog.Logger) *Handler {
+func New(l zerolog.Logger) *Handler {
 	return &Handler{
-		geoIP: geoIPSvc,
-		l:     l,
+		l: l,
 	}
 }
 
 func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
+	l := rpcutil.ReqLog(req, h.l)
+	l.Info().Msg("time request")
+
 	m := metrics.HTTPServerRequest(req, "/v2/time")
 
 	res := &Response{
 		Value: time.Now().Unix(),
 	}
 
-	rAddr := remoteaddr.FromCtx(req.Context())
-	if rAddr == "" {
+	ci := clientinfo.FromCtx(req.Context())
+	if ci.RemoteAddr == "" {
 		m(http.StatusInternalServerError)
-		h.l.Error().Msg("no remote addr in request context")
+		l.Error().Err(errors.New("missing remote address")).Msg("time request failed")
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	geo := geoip.FromCtx(req.Context())
-	if geo == nil {
+	if ci.Timezone == "" {
 		m(http.StatusInternalServerError)
-		h.l.Error().Msg("no geo ip data in request context")
+		l.Error().Err(errors.New("missing timezone")).Msg("time request failed")
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	res.TZ = geo.Timezone
-	res.TZData = tz.ToPosix(geo.Timezone)
+	res.TZ = ci.Timezone
+	res.TZData = tz.ToPosix(ci.Timezone)
 
 	b, err := json.Marshal(res)
 	if err != nil {
 		m(http.StatusInternalServerError)
-		h.l.Error().Err(err).Msg("response marshal error")
+		l.Error().Err(fmt.Errorf("load timezone: %w", err)).Msg("time request failed")
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -70,10 +72,11 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
 
 	if _, err = rw.Write(b); err != nil {
 		m(http.StatusInternalServerError)
-		h.l.Error().Err(err).Msg("response write error")
+		l.Error().Err(fmt.Errorf("write response: %w", err)).Msg("time request failed")
 		return
 	}
 
 	m(http.StatusOK)
-	h.l.Info().RawJSON("data", b).Msg("response")
+
+	l.Info().RawJSON("data", b).Msg("time response")
 }

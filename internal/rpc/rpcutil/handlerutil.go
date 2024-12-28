@@ -1,4 +1,4 @@
-package httputil
+package rpcutil
 
 import (
 	"net/http"
@@ -7,9 +7,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/ashep/d5y/internal/auth"
-	"github.com/ashep/d5y/internal/geoip"
-	"github.com/ashep/d5y/internal/remoteaddr"
+	"github.com/ashep/d5y/internal/clientinfo"
 )
 
 func WriteBadRequest(w http.ResponseWriter, msg string, l zerolog.Logger) {
@@ -39,26 +37,22 @@ func WriteInternalServerError(w http.ResponseWriter, err error, l zerolog.Logger
 	}
 }
 
-func ReqLogger(r *http.Request, l zerolog.Logger) zerolog.Logger {
+func ReqLog(req *http.Request, l zerolog.Logger) zerolog.Logger {
+	ci := clientinfo.FromCtx(req.Context())
+
 	ll := l.With().
-		Str("method", r.Method).
-		Str("uri", r.RequestURI).
-		Str("user_agent", r.Header.Get("User-Agent"))
-
-	if rAddr := remoteaddr.FromCtx(r.Context()); rAddr != "" {
-		ll.Str("remote_addr", rAddr)
-	}
-
-	if geoIP := geoip.FromCtx(r.Context()); geoIP != nil {
-		ll.Str("country", geoIP.CountryName).
-			Str("region", geoIP.RegionName).
-			Str("city", geoIP.City).
-			Str("timezone", geoIP.Timezone)
-	}
-
-	if authTok := auth.TokenFromCtx(r.Context()); authTok != "" {
-		ll.Str("client_id", authTok)
-	}
+		Str("req_method", req.Method).
+		Str("req_uri", req.RequestURI).
+		Str("user_agent", ci.UserAgent).
+		Str("remote_addr", ci.RemoteAddr).
+		Str("client_id", ci.ID).
+		Str("client_vendor", ci.Vendor).
+		Str("client_name", ci.Name).
+		Str("client_version", ci.Version).
+		Str("client_hardware", ci.Hardware).
+		Str("client_country", ci.Country).
+		Str("client_city", ci.City).
+		Str("client_timezone", ci.City)
 
 	return ll.Logger()
 }

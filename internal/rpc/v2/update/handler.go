@@ -3,11 +3,12 @@ package update
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/ashep/d5y/internal/httputil"
+	"github.com/ashep/d5y/internal/rpc/rpcutil"
 	"github.com/ashep/d5y/internal/update"
 	"github.com/ashep/go-app/metrics"
 	"github.com/rs/zerolog"
@@ -26,10 +27,14 @@ func New(updSvc *update.Service, l zerolog.Logger) *Handler {
 }
 
 func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) { //nolint:cyclop // later
+	l := rpcutil.ReqLog(req, h.l)
+	l.Info().Msg("firmware update request")
+
 	m := metrics.HTTPServerRequest(req, "/v2/update")
 
 	if req.Method != http.MethodGet {
 		m(http.StatusMethodNotAllowed)
+		l.Warn().Err(errors.New("method not allowed")).Msg("firmware update request failed")
 		rw.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -39,70 +44,64 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) { //nolint:c
 	appQ := q.Get("app")
 	if appQ == "" {
 		m(http.StatusBadRequest)
-		httputil.WriteBadRequest(rw, "invalid app", h.l)
+		l.Warn().Err(errors.New("invalid app")).Msg("firmware update request failed")
+		rpcutil.WriteBadRequest(rw, "invalid app", l)
 		return
 	}
 
 	appS := strings.Split(appQ, ":")
 	if len(appS) != 4 {
 		m(http.StatusBadRequest)
-		httputil.WriteBadRequest(rw, "invalid app", h.l)
+		l.Warn().Err(errors.New("invalid app")).Msg("firmware update request failed")
+		rpcutil.WriteBadRequest(rw, "invalid app", l)
 		return
 	}
 
 	ver, err := semver.NewVersion(appS[3])
 	if err != nil {
 		m(http.StatusBadRequest)
-		h.l.Warn().Err(err).Str("version", appS[3]).Msg("parse app version failed")
-		httputil.WriteBadRequest(rw, "invalid version", h.l)
+		l.Warn().Err(errors.New("invalid app version")).Msg("firmware update request failed")
+		rpcutil.WriteBadRequest(rw, "invalid version", l)
 		return
 	}
 
 	toAlpha := q.Get("to_alpha")
 
-	l := httputil.ReqLogger(req, h.l).With().
-		Str("client_app_name", appS[0]+"/"+appS[1]).
-		Str("client_app", appS[2]).
-		Str("client_app_v", appS[3]).
-		Str("to_alpha", toAlpha).
-		Logger()
-
-	l.Info().Msg("firmware update requested")
-
 	rlsSet, err := h.updSvc.List(req.Context(), appS[0], appS[1], appS[2], toAlpha != "0")
 	if errors.Is(err, update.ErrAppNotFound) {
 		m(http.StatusNotFound)
-		l.Warn().Str("reason", "unknown client app").Msg("no updates found")
-		httputil.WriteNotFound(rw, err.Error(), l)
+		l.Warn().Err(errors.New("unknown client app")).Msg("firmware update request failed")
+		rpcutil.WriteNotFound(rw, err.Error(), l)
 		return
 	} else if err != nil {
 		m(http.StatusInternalServerError)
-		httputil.WriteInternalServerError(rw, err, l)
+		rpcutil.WriteInternalServerError(rw, err, l)
 		return
 	}
 
 	rls := rlsSet.Next(ver)
 	if rls == nil {
-		m(http.StatusNotFound)
-		l.Info().Str("reason", "no next release").Msg("no firmware update found")
-		httputil.WriteNotFound(rw, "no update found", l)
+		m(http.StatusOK) // OK is the correct code here
+		l.Info().Str("result", "no next release").Msg("firmware update response")
+		rpcutil.WriteNotFound(rw, "no firmware update found", l)
 		return
 	}
 
 	if len(rls.Assets) == 0 {
+		m(http.StatusOK) // OK is the correct code here
 		l.Warn().
 			Str("release", rls.Version.String()).
-			Str("reason", "no assets in the release").
-			Msg("no firmware update found")
-		m(http.StatusNotFound)
-		httputil.WriteNotFound(rw, "no firmware update found", l)
+			Str("result", "no assets in the release").
+			Msg("firmware update response")
+		rpcutil.WriteNotFound(rw, "no firmware update found", l)
 		return
 	}
 
 	b, err := json.Marshal(rls.Assets[0])
 	if err != nil {
 		m(http.StatusInternalServerError)
-		httputil.WriteInternalServerError(rw, err, l)
+		l.Error().Err(fmt.Errorf("marshal response: %w", err)).Msg("firmware update request failed")
+		rpcutil.WriteInternalServerError(rw, err, l)
 		return
 	}
 
@@ -110,14 +109,14 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) { //nolint:c
 
 	if _, err := rw.Write(b); err != nil {
 		m(http.StatusInternalServerError)
-		l.Error().Err(err).Msg("failed to write firmware update response")
+		l.Error().Err(fmt.Errorf("write response: %w", err)).Msg("firmware update request failed")
 		return
 	}
 
 	m(http.StatusOK)
 
 	l.Info().
-		Str("url", rls.Assets[0].URL).
+		Str("download_url", rls.Assets[0].URL).
 		Str("version", rls.Version.String()).
-		Msg("firmware response update sent")
+		Msg("firmware update response")
 }

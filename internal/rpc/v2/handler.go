@@ -5,7 +5,6 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/ashep/d5y/internal/geoip"
 	timeh "github.com/ashep/d5y/internal/rpc/v2/time"
 	updateh "github.com/ashep/d5y/internal/rpc/v2/update"
 	weatherh "github.com/ashep/d5y/internal/rpc/v2/weather"
@@ -19,9 +18,9 @@ type Handler struct {
 	update  *updateh.Handler
 }
 
-func New(giSvc *geoip.Service, wthSvc *weather.Service, updSvc *update.Service, l zerolog.Logger) *Handler {
+func New(wthSvc *weather.Service, updSvc *update.Service, l zerolog.Logger) *Handler {
 	return &Handler{
-		time:    timeh.New(giSvc, l.With().Str("handler", "time").Logger()),
+		time:    timeh.New(l.With().Str("handler", "time").Logger()),
 		weather: weatherh.New(wthSvc, l.With().Str("handler", "weather").Logger()),
 		update:  updateh.New(updSvc, l),
 	}

@@ -1,7 +1,3 @@
-// Author:  Oleksandr Shepetko
-// Email:   a@shepetko.com
-// License: MIT
-
 package geoip
 
 import (
@@ -11,11 +7,11 @@ import (
 	"github.com/ashep/d5y/internal/httpcli"
 )
 
-type Service struct {
-	cli   *httpcli.Client
-	cache map[string]*Data
-	mux   *sync.Mutex
-}
+var (
+	cli   = httpcli.New()
+	cache = make(map[string]*Data)
+	mux   = &sync.Mutex{}
+)
 
 type Data struct {
 	City        string  `json:"city,omitempty"`
@@ -38,30 +34,22 @@ func (d *Data) String() string {
 	return string(b)
 }
 
-func New() *Service {
-	return &Service{
-		cli:   httpcli.New(),
-		cache: make(map[string]*Data),
-		mux:   &sync.Mutex{},
-	}
-}
+func Get(addr string) (*Data, error) {
+	mux.Lock()
+	defer mux.Unlock()
 
-func (s *Service) Get(addr string) (*Data, error) {
-	s.mux.Lock()
-	defer s.mux.Unlock()
-
-	d, ok := s.cache[addr]
+	d, ok := cache[addr]
 	if ok {
 		return d, nil
 	}
 
 	d = &Data{}
 
-	if err := s.cli.GetJSON("http://ip-api.com/json/"+addr, d); err != nil {
+	if err := cli.GetJSON("http://ip-api.com/json/"+addr, d); err != nil {
 		return nil, err
 	}
 
-	s.cache[addr] = d
+	cache[addr] = d
 
 	return d, nil
 }

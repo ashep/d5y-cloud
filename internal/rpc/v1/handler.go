@@ -2,14 +2,16 @@ package v1
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/ashep/d5y/internal/rpc/rpcutil"
 	"github.com/ashep/go-app/metrics"
 	"github.com/rs/zerolog"
 
-	"github.com/ashep/d5y/internal/geoip"
-	"github.com/ashep/d5y/internal/remoteaddr"
+	"github.com/ashep/d5y/internal/clientinfo"
 	"github.com/ashep/d5y/internal/weather"
 )
 
@@ -28,14 +30,12 @@ type Response struct {
 }
 
 type Handler struct {
-	geoIP   *geoip.Service
 	weather *weather.Service
 	l       zerolog.Logger
 }
 
-func New(g *geoip.Service, w *weather.Service, l zerolog.Logger) *Handler {
+func New(w *weather.Service, l zerolog.Logger) *Handler {
 	return &Handler{
-		geoIP:   g,
 		weather: w,
 		l:       l,
 	}
@@ -48,27 +48,32 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	l := rpcutil.ReqLog(req, h.l)
+	l.Info().Msg("v1 request")
+
 	m := metrics.HTTPServerRequest(req, "/v1")
 
-	rAddr := remoteaddr.FromRequest(req)
-	if rAddr == "" {
+	ci := clientinfo.FromCtx(req.Context())
+	if ci.RemoteAddr == "" {
 		m(http.StatusInternalServerError)
-		h.l.Error().Msg("empty remote address")
+		l.Error().Err(errors.New("missing remote address")).Msg("v1 request failed")
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	geo := geoip.FromCtx(req.Context())
-	if geo == nil {
+	if ci.Timezone == "" {
 		m(http.StatusInternalServerError)
-		h.l.Warn().Msg("empty geo ip data")
+		l.Warn().Err(errors.New("missing timezone")).Msg("v1 request failed")
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	tz, err := time.LoadLocation(geo.Timezone)
+	tz, err := time.LoadLocation(ci.Timezone)
 	if err != nil {
-		h.l.Warn().Err(err).Msg("time zone detect failed")
+		m(http.StatusInternalServerError)
+		l.Error().Err(fmt.Errorf("load timezone: %w", err)).Msg("v1 request failed")
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	t := time.Now().In(tz)
@@ -90,19 +95,19 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Add weather data
-	weatherData, err := h.weather.GetForIPAddr(rAddr)
+	weatherData, err := h.weather.GetForIPAddr(ci.RemoteAddr)
 	if err == nil {
 		resp.Weather = true
 		resp.Temp = weatherData.Current.Temp
 		resp.FeelsLike = weatherData.Current.FeelsLike
 	} else {
-		h.l.Error().Err(err).Msg("weather get failed")
+		l.Error().Err(fmt.Errorf("get weather: %w", err)).Msg("v1 request warning")
 	}
 
 	d, err := json.Marshal(resp)
 	if err != nil {
 		m(http.StatusInternalServerError)
-		h.l.Error().Err(err).Msg("response marshal failed")
+		l.Error().Err(fmt.Errorf("marshal response: %w", err)).Msg("v1 request failed")
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -112,9 +117,11 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
 
 	if _, err = rw.Write(d); err != nil {
 		m(http.StatusInternalServerError)
-		h.l.Error().Err(err).Msg("response write failed")
+		l.Error().Err(fmt.Errorf("write response: %w", err)).Msg("v1 request failed")
+		return
 	}
 
 	m(http.StatusOK)
-	h.l.Info().RawJSON("data", d).Msg("response")
+
+	l.Info().RawJSON("data", d).Msg("v1 response")
 }
