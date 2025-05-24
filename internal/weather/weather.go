@@ -69,6 +69,7 @@ func (c *Service) GetForIPAddr(addr string) (*Data, error) {
 
 	res := &Data{
 		Current: DataItem{
+			Code:      owRes.Current.Condition.Code,
 			Title:     owRes.Current.Condition.Text,
 			IconURL:   owRes.Current.Condition.Icon,
 			Temp:      owRes.Current.Temp,
