@@ -16,6 +16,7 @@ type Service struct {
 }
 
 type DataItem struct {
+	Code      int     `json:"code"` // https://www.weatherapi.com/docs/weather_conditions.json
 	Title     string  `json:"title"`
 	Temp      float64 `json:"temp"`
 	FeelsLike float64 `json:"feels_like"`
