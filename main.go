@@ -9,8 +9,9 @@ import (
 
 func main() {
 	runner.New(app.New, app.Config{}).
-		WithDefaultHTTPLogWriter(false).
+		WithConsoleLogWriter().
+		WithDefaultHTTPLogWriter().
 		WithDefaultHTPServer().
-		WithMetricsHandler().
+		WithDefaultMetricsHandler().
 		Run()
 }
