@@ -183,7 +183,7 @@ func (s *Service) assetChecksum(ctx context.Context, url string) string {
 		return ""
 	}
 
-	defer res.Body.Close()
+	defer res.Body.Close() //nolint:errcheck // ok
 
 	if res.StatusCode != http.StatusOK {
 		return ""

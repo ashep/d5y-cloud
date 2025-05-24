@@ -45,7 +45,7 @@ func ToPosix(s string) string {
 		return utcPosixName
 	}
 
-	bs := bytes.SplitN(b, []byte("\n"), -1)
+	bs := bytes.Split(b, []byte("\n"))
 	if len(bs) < 2 {
 		log.Printf("tz: failed to read zone data for %s: %v", s, err)
 		return utcPosixName

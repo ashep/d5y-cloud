@@ -11,7 +11,7 @@ func main() {
 	runner.New(app.New, app.Config{}).
 		WithConsoleLogWriter().
 		WithDefaultHTTPLogWriter().
-		WithDefaultHTPServer().
+		WithDefaultHTTPServer().
 		WithDefaultMetricsHandler().
 		Run()
 }
