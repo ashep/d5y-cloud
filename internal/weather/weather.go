@@ -10,6 +10,23 @@ import (
 	"github.com/ashep/d5y/internal/httpcli"
 )
 
+//type ConditionID int
+//
+//const (
+//	ConditionUnknown ConditionID = iota
+//	ConditionClear
+//	ConditionPartlyCloudy
+//	ConditionCloudy
+//	ConditionOvercast
+//	ConditionMist
+//	ConditionLightRain
+//	ConditionMediumRain
+//	ConditionHeavyRain
+//	ConditionLightSnow
+//	ConditionMediumSnow
+//	ConditionHeavySnow
+//)
+
 type Service struct {
 	c      *httpcli.Client
 	apiKey string
@@ -81,3 +98,25 @@ func (c *Service) GetForIPAddr(addr string) (*Data, error) {
 
 	return res, nil
 }
+
+//func mapWeatherAPIConditionID(id int) ConditionID {
+//	// https://www.weatherapi.com/docs/weather_conditions.json
+//	switch id {
+//	case 1000:
+//		return ConditionClear
+//	case 1003:
+//		return ConditionPartlyCloudy
+//	case 1006:
+//		return ConditionCloudy
+//	case 1009:
+//		return ConditionOvercast
+//	case 1030:
+//		return ConditionMist
+//	case 1063: // Patchy rain possible
+//		return ConditionLightRain
+//	case 1066: // Patchy snow possible
+//		return ConditionLightSnow
+//	default:
+//		return ConditionUnknown
+//	}
+//}
