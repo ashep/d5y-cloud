@@ -41,6 +41,7 @@ type Service struct {
 type DataItem struct {
 	Id        ConditionID `json:"id"`
 	Title     string      `json:"title"`
+	IsDay     bool        `json:"is_day"`
 	Temp      float64     `json:"temp"`
 	FeelsLike float64     `json:"feels_like"`
 }
@@ -61,6 +62,7 @@ type wAPIRespCurrent struct {
 	Pressure  float64           `json:"pressure_mb"`
 	Humidity  float64           `json:"humidity"`
 	Condition wAPIRespCondition `json:"condition"`
+	IsDay     int               `json:"is_day"`
 }
 
 type wAPIResp struct {
@@ -91,6 +93,7 @@ func (c *Service) GetForIPAddr(addr string) (*Data, error) {
 		Current: DataItem{
 			Id:        mapWeatherAPIConditionID(owRes.Current.Condition.Code),
 			Title:     owRes.Current.Condition.Text,
+			IsDay:     owRes.Current.IsDay != 0,
 			Temp:      owRes.Current.Temp,
 			FeelsLike: owRes.Current.FeelsLike,
 		},
