@@ -41,7 +41,7 @@ type Service struct {
 type DataItem struct {
 	Id        ConditionID `json:"id"`
 	Title     string      `json:"title"`
-	IsDay     bool        `json:"is_day"`
+	IsDay     int         `json:"is_day"`
 	Temp      float64     `json:"temp"`
 	FeelsLike float64     `json:"feels_like"`
 }
@@ -93,7 +93,7 @@ func (c *Service) GetForIPAddr(addr string) (*Data, error) {
 		Current: DataItem{
 			Id:        mapWeatherAPIConditionID(owRes.Current.Condition.Code),
 			Title:     owRes.Current.Condition.Text,
-			IsDay:     owRes.Current.IsDay != 0,
+			IsDay:     owRes.Current.IsDay,
 			Temp:      owRes.Current.Temp,
 			FeelsLike: owRes.Current.FeelsLike,
 		},
