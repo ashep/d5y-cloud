@@ -39,7 +39,7 @@ type Service struct {
 }
 
 type DataItem struct {
-	Code      ConditionID `json:"code"` // https://www.weatherapi.com/docs/weather_conditions.json
+	Id        ConditionID `json:"id"`
 	Title     string      `json:"title"`
 	Temp      float64     `json:"temp"`
 	FeelsLike float64     `json:"feels_like"`
@@ -92,7 +92,7 @@ func (c *Service) GetForIPAddr(addr string) (*Data, error) {
 
 	res := &Data{
 		Current: DataItem{
-			Code:      mapWeatherAPIConditionID(owRes.Current.Condition.Code),
+			Id:        mapWeatherAPIConditionID(owRes.Current.Condition.Code),
 			Title:     owRes.Current.Condition.Text,
 			IconURL:   owRes.Current.Condition.Icon,
 			Temp:      owRes.Current.Temp,
