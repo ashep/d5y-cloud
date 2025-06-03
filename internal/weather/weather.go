@@ -109,14 +109,14 @@ func mapWeatherAPIConditionID(id int) ConditionID {
 		return ConditionClear
 	case 1003: // Partly cloudy
 		return ConditionPartlyCloudy
-	case 1006: // Cloudy
+	case 1006, // Cloudy
+		1063: // Patchy rain possible
 		return ConditionCloudy
 	case 1009: // Overcast
 		return ConditionOvercast
 	case 1030: // Mist
 		return ConditionMist
-	case 1063, // Patchy rain possible
-		1072, // Patchy freezing drizzle possible
+	case 1072, // Patchy freezing drizzle possible
 		1150, // Patchy light drizzle
 		1153, // Light drizzle
 		1168, // Freezing drizzle
