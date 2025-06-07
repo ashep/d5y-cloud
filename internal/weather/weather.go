@@ -1,7 +1,3 @@
-// Author:  Oleksandr Shepetko
-// Email:   a@shepetko.com
-// License: MIT
-
 package weather
 
 import (
@@ -107,10 +103,10 @@ func mapWeatherAPIConditionID(id int) ConditionID {
 	switch id {
 	case 1000: // Sunny / clear
 		return ConditionClear
-	case 1003: // Partly cloudy
-		return ConditionPartlyCloudy
-	case 1006, // Cloudy
+	case 1003, // Partly cloudy
 		1063: // Patchy rain possible
+		return ConditionPartlyCloudy
+	case 1006: // Cloudy
 		return ConditionCloudy
 	case 1009: // Overcast
 		return ConditionOvercast
