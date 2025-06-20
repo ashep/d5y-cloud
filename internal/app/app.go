@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
+	handlerNotFound "github.com/ashep/d5y/internal/api/notfound"
+	handlerV1 "github.com/ashep/d5y/internal/api/v1"
+	handlerV2 "github.com/ashep/d5y/internal/api/v2"
 	"github.com/ashep/d5y/internal/clientinfo"
-	handlerNotFound "github.com/ashep/d5y/internal/rpc/notfound"
-	handlerV1 "github.com/ashep/d5y/internal/rpc/v1"
-	handlerV2 "github.com/ashep/d5y/internal/rpc/v2"
 	"github.com/ashep/d5y/internal/update"
 	"github.com/ashep/d5y/internal/weather"
 	"github.com/ashep/go-app/runner"

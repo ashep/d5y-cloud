@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ashep/d5y/internal/rpc/rpcutil"
+	"github.com/ashep/d5y/internal/api/rpcutil"
 	"github.com/ashep/go-app/metrics"
 	"github.com/rs/zerolog"
 

@@ -4,7 +4,7 @@ go 1.24
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/ashep/go-app v0.0.0-20250524150002-54a8d2a5020d
+	github.com/ashep/go-app v0.0.0-20250524151006-d29a4580159d
 	github.com/google/go-github/v63 v63.0.0
 	github.com/prometheus/client_golang v1.22.0
 	github.com/rs/zerolog v1.34.0

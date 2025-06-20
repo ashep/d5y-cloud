@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/ashep/d5y/internal/rpc/rpcutil"
+	"github.com/ashep/d5y/internal/api/rpcutil"
 	"github.com/ashep/d5y/internal/update"
 	"github.com/ashep/go-app/metrics"
 	"github.com/rs/zerolog"
@@ -28,8 +28,6 @@ func New(updSvc *update.Service, l zerolog.Logger) *Handler {
 
 func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) { //nolint:cyclop // later
 	l := rpcutil.ReqLog(req, h.l)
-	l.Info().Msg("firmware update request")
-
 	m := metrics.HTTPServerRequest(req, "/v2/update")
 
 	if req.Method != http.MethodGet {
@@ -40,6 +38,7 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) { //nolint:c
 	}
 
 	q := req.URL.Query()
+	l.Info().Str("query", q.Encode()).Msg("firmware update request")
 
 	appQ := q.Get("app")
 	if appQ == "" {

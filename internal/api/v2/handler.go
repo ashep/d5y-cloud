@@ -5,9 +5,9 @@ import (
 
 	"github.com/rs/zerolog"
 
-	timeh "github.com/ashep/d5y/internal/rpc/v2/time"
-	updateh "github.com/ashep/d5y/internal/rpc/v2/update"
-	weatherh "github.com/ashep/d5y/internal/rpc/v2/weather"
+	timeh "github.com/ashep/d5y/internal/api/v2/time"
+	updateh "github.com/ashep/d5y/internal/api/v2/update"
+	weatherh "github.com/ashep/d5y/internal/api/v2/weather"
 	"github.com/ashep/d5y/internal/update"
 	"github.com/ashep/d5y/internal/weather"
 )

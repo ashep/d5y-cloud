@@ -26,13 +26,29 @@ type Release struct {
 	Assets  []Asset         `json:"assets"`
 }
 
-type ReleaseSet []Release
+type ReleaseSet struct {
+	Owner string
+	Name  string
+	List  []Release
+}
 
 // Next returns the release which version number is after v.
-func (r ReleaseSet) Next(v *semver.Version) *Release {
-	for i, rl := range r {
-		if rl.Version.GreaterThan(v) {
-			return &r[i]
+func (r ReleaseSet) Next(current *semver.Version) *Release {
+	if current == nil {
+		return nil
+	}
+
+	if excVerSrc.Contains(r.Owner, r.Name, current) {
+		return nil
+	}
+
+	for i, next := range r.List {
+		if excVerDst.Contains(r.Owner, r.Name, next.Version) {
+			continue
+		}
+
+		if next.Version.GreaterThan(current) {
+			return &r.List[i]
 		}
 	}
 
@@ -64,8 +80,12 @@ func (s *Service) List(
 	repoName string,
 	arch string,
 	incAlpha bool,
-) (ReleaseSet, error) {
-	res := make(ReleaseSet, 0)
+) (*ReleaseSet, error) {
+	res := &ReleaseSet{
+		Owner: repoOwner,
+		Name:  repoName,
+		List:  make([]Release, 0),
+	}
 
 	arch = strings.ReplaceAll(strings.ToLower(arch), "-", "_")
 
@@ -74,7 +94,7 @@ func (s *Service) List(
 
 		ghErr := &github.ErrorResponse{}
 		if errors.As(err, &ghErr) && ghErr.Response.StatusCode == http.StatusNotFound {
-			return ReleaseSet{}, ErrAppNotFound
+			return nil, ErrAppNotFound
 		} else if err != nil {
 			return nil, fmt.Errorf("gitbhub: list releases: %w", err)
 		}
@@ -153,11 +173,11 @@ func (s *Service) List(
 				})
 			}
 
-			res = append(res, rel)
+			res.List = append(res.List, rel)
 		}
 	}
 
-	slices.SortFunc(res, func(a, b Release) int {
+	slices.SortFunc(res.List, func(a, b Release) int {
 		return a.Version.Compare(b.Version)
 	})
 
