@@ -23,7 +23,7 @@ func WrapHTTP(next http.HandlerFunc, l zerolog.Logger) http.HandlerFunc {
 			"city":     ci.City,
 		}
 
-		metrics.Counter("client_info", "D5Y Cloud clients.", labels).With(labels).Inc()
+		metrics.Counter("d5y_cloud_client_info", "D5Y Cloud client info", labels).With(labels).Inc()
 
 		next.ServeHTTP(rw, req.Clone(context.WithValue(req.Context(), ctxKey, ci)))
 	}
