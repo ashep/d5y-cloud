@@ -12,7 +12,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/clientinfo"
-	"github.com/ashep/d5y/internal/weather"
+	"github.com/ashep/d5y/internal/weatherapi"
 )
 
 type Response struct {
@@ -30,11 +30,11 @@ type Response struct {
 }
 
 type Handler struct {
-	weather *weather.Service
+	weather *weatherapi.Service
 	l       zerolog.Logger
 }
 
-func New(w *weather.Service, l zerolog.Logger) *Handler {
+func New(w *weatherapi.Service, l zerolog.Logger) *Handler {
 	return &Handler{
 		weather: w,
 		l:       l,

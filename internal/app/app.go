@@ -9,7 +9,7 @@ import (
 	handlerV2 "github.com/ashep/d5y/internal/api/v2"
 	"github.com/ashep/d5y/internal/clientinfo"
 	"github.com/ashep/d5y/internal/update"
-	"github.com/ashep/d5y/internal/weather"
+	"github.com/ashep/d5y/internal/weatherapi"
 	"github.com/ashep/go-app/runner"
 	"github.com/google/go-github/v63/github"
 	"github.com/rs/zerolog"
@@ -28,7 +28,7 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func setupServer(cfg Config, mux *http.ServeMux, l zerolog.Logger) {
-	weatherSvc := weather.New(cfg.Weather.APIKey)
+	weatherSvc := weatherapi.New(cfg.Weather.APIKey)
 	githubCli := github.NewClient(http.DefaultClient).WithAuthToken(cfg.GitHub.Token)
 	updSvc := update.New(githubCli, l.With().Str("pkg", "update_svc").Logger())
 
