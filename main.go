@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	runner.New(app.New, app.Config{}).
+	runner.New(app.New).
 		WithConsoleLogWriter().
 		WithDefaultHTTPLogWriter().
 		WithDefaultHTTPServer().

@@ -17,7 +17,7 @@ import (
 
 type App struct{}
 
-func New(cfg Config, rt *runner.Runtime) (*App, error) {
+func New(cfg *Config, rt *runner.Runtime) (*App, error) {
 	setupServer(cfg, rt.SrvMux, rt.Logger)
 	return &App{}, nil
 }
@@ -27,7 +27,7 @@ func (a *App) Run(ctx context.Context) error {
 	return nil
 }
 
-func setupServer(cfg Config, mux *http.ServeMux, l zerolog.Logger) {
+func setupServer(cfg *Config, mux *http.ServeMux, l zerolog.Logger) {
 	weatherSvc := weatherapi.New(cfg.Weather.APIKey)
 	githubCli := github.NewClient(http.DefaultClient).WithAuthToken(cfg.GitHub.Token)
 	updSvc := update.New(githubCli, l.With().Str("pkg", "update_svc").Logger())
