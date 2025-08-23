@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ashep/d5y/internal/clientinfo"
 	"github.com/ashep/d5y/internal/httpcli"
@@ -106,7 +107,7 @@ func New(apiKey string) *Service {
 func (s *Service) GetFromRequest(req *http.Request) (*Data, error) {
 	lat, lng := req.URL.Query().Get("lat"), req.URL.Query().Get("lng")
 
-	if lat != "" && lng != "" {
+	if lat != "" && lng != "" && !strings.HasPrefix(lat, "0.") && !strings.HasPrefix(lng, "0.") {
 		latF, err := strconv.ParseFloat(lat, 32)
 		if err != nil {
 			return nil, fmt.Errorf("%w: lat: %w", ErrInvalidArgument, err)
