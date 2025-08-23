@@ -88,16 +88,16 @@ func (h *Handler) getForLocation(lat, lng string) (*weather.Data, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse lat: %w", err)
 	}
-	if latF == 0 {
-		return nil, nil
+	if latF < -90 || latF > 90 {
+		return nil, fmt.Errorf("latitude out of range: %v", latF)
 	}
 
 	lngF, err := strconv.ParseFloat(lng, 32)
 	if err != nil {
 		return nil, fmt.Errorf("parse lng: %w", err)
 	}
-	if lngF == 0 {
-		return nil, nil
+	if lngF < -180 || lngF > 180 {
+		return nil, fmt.Errorf("longitude out of range: %v", lngF)
 	}
 
 	return h.weather.GetForLocation(latF, lngF)
