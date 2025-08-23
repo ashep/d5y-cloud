@@ -72,15 +72,23 @@ func New(apiKey string) *Service {
 	}
 }
 
-func (c *Service) GetForIPAddr(addr string) (*Data, error) {
-	if c.apiKey == "" {
+func (s *Service) GetForIPAddr(addr string) (*Data, error) {
+	return s.get(addr)
+}
+
+func (s *Service) GetForLocation(lat, lng float64) (*Data, error) {
+	return s.get(fmt.Sprintf("%f,%f", lat, lng))
+}
+
+func (s *Service) get(query string) (*Data, error) {
+	if s.apiKey == "" {
 		return nil, fmt.Errorf("empty weather api key")
 	}
 
-	apiURL := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", c.apiKey, addr)
+	apiURL := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", s.apiKey, query)
 	owRes := &wAPIResp{}
 
-	err := c.c.GetJSON(apiURL, owRes)
+	err := s.c.GetJSON(apiURL, owRes)
 	if err != nil {
 		return nil, err
 	}
