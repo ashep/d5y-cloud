@@ -9,7 +9,7 @@ import (
 	updateh "github.com/ashep/d5y/internal/api/v2/update"
 	weatherh "github.com/ashep/d5y/internal/api/v2/weather"
 	"github.com/ashep/d5y/internal/update"
-	"github.com/ashep/d5y/internal/weather"
+	"github.com/ashep/d5y/internal/weatherapi"
 )
 
 type Handler struct {
@@ -18,10 +18,10 @@ type Handler struct {
 	update  *updateh.Handler
 }
 
-func New(wthSvc *weather.Service, updSvc *update.Service, l zerolog.Logger) *Handler {
+func New(wAPI *weatherapi.Service, updSvc *update.Service, l zerolog.Logger) *Handler {
 	return &Handler{
-		time:    timeh.New(l.With().Str("handler", "time").Logger()),
-		weather: weatherh.New(wthSvc, l.With().Str("handler", "weather").Logger()),
+		time:    timeh.New(wAPI, l.With().Str("handler", "time").Logger()),
+		weather: weatherh.New(wAPI, l.With().Str("handler", "weather").Logger()),
 		update:  updateh.New(updSvc, l),
 	}
 }

@@ -1,9 +1,18 @@
-package weather
+package weatherapi
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
 
+	"github.com/ashep/d5y/internal/clientinfo"
 	"github.com/ashep/d5y/internal/httpcli"
+)
+
+var (
+	ErrInvalidArgument = errors.New("invalid argument")
 )
 
 type ConditionID int
@@ -34,7 +43,17 @@ type Service struct {
 	apiKey string
 }
 
-type DataItem struct {
+type Location struct {
+	Name     string
+	Country  string
+	Region   string
+	Lat      float64
+	Lng      float64
+	Timezone string
+	Time     string
+}
+
+type ConditionItem struct {
 	Id        ConditionID `json:"id"`
 	Title     string      `json:"title"`
 	IsDay     int         `json:"is_day"`
@@ -43,7 +62,19 @@ type DataItem struct {
 }
 
 type Data struct {
-	Current DataItem `json:"current"`
+	Location Location      `json:"location"`
+	Current  ConditionItem `json:"current"`
+}
+
+type wAPIRespLocation struct {
+	Name           string  `json:"name"`
+	Country        string  `json:"country"`
+	Region         string  `json:"region"`
+	Lat            float64 `json:"lat"`
+	Lon            float64 `json:"lon"`
+	TZID           string  `json:"tz_id"`
+	LocalTimeEpoch int     `json:"localtime_epoch"`
+	LocalTime      string  `json:"localtime"`
 }
 
 type wAPIRespCondition struct {
@@ -62,7 +93,8 @@ type wAPIRespCurrent struct {
 }
 
 type wAPIResp struct {
-	Current wAPIRespCurrent `json:"current"`
+	Location wAPIRespLocation `json:"location"`
+	Current  wAPIRespCurrent  `json:"current"`
 }
 
 func New(apiKey string) *Service {
@@ -72,21 +104,69 @@ func New(apiKey string) *Service {
 	}
 }
 
-func (c *Service) GetForIPAddr(addr string) (*Data, error) {
-	if c.apiKey == "" {
+func (s *Service) GetFromRequest(req *http.Request) (*Data, error) {
+	lat, lng := req.URL.Query().Get("lat"), req.URL.Query().Get("lng")
+
+	if lat != "" && lng != "" && !strings.HasPrefix(lat, "0.") && !strings.HasPrefix(lng, "0.") {
+		latF, err := strconv.ParseFloat(lat, 32)
+		if err != nil {
+			return nil, fmt.Errorf("%w: lat: %w", ErrInvalidArgument, err)
+		}
+		if latF < -90 || latF > 90 {
+			return nil, fmt.Errorf("%w: lat is out of range: %v", ErrInvalidArgument, latF)
+		}
+
+		lngF, err := strconv.ParseFloat(lng, 32)
+		if err != nil {
+			return nil, fmt.Errorf("%w: lng: %w", ErrInvalidArgument, err)
+		}
+		if lngF < -180 || lngF > 180 {
+			return nil, fmt.Errorf("%w: lng is out of range: %v", ErrInvalidArgument, latF)
+		}
+
+		return s.GetForLocation(latF, lngF)
+	}
+
+	ci := clientinfo.FromCtx(req.Context())
+	if ci.RemoteAddr == "" {
+		return nil, errors.New("missing remote address in client info")
+	}
+
+	return s.GetForIPAddr(ci.RemoteAddr)
+}
+
+func (s *Service) GetForIPAddr(addr string) (*Data, error) {
+	return s.get(addr)
+}
+
+func (s *Service) GetForLocation(lat, lng float64) (*Data, error) {
+	return s.get(fmt.Sprintf("%f,%f", lat, lng))
+}
+
+func (s *Service) get(query string) (*Data, error) {
+	if s.apiKey == "" {
 		return nil, fmt.Errorf("empty weather api key")
 	}
 
-	apiURL := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", c.apiKey, addr)
+	apiURL := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", s.apiKey, query)
 	owRes := &wAPIResp{}
 
-	err := c.c.GetJSON(apiURL, owRes)
+	err := s.c.GetJSON(apiURL, owRes)
 	if err != nil {
 		return nil, err
 	}
 
 	res := &Data{
-		Current: DataItem{
+		Location: Location{
+			Name:     owRes.Location.Name,
+			Country:  owRes.Location.Country,
+			Region:   owRes.Location.Region,
+			Lat:      owRes.Location.Lat,
+			Lng:      owRes.Location.Lon,
+			Timezone: owRes.Location.TZID,
+			Time:     owRes.Location.LocalTime,
+		},
+		Current: ConditionItem{
 			Id:        mapWeatherAPIConditionID(owRes.Current.Condition.Code),
 			Title:     owRes.Current.Condition.Text,
 			IsDay:     owRes.Current.IsDay,

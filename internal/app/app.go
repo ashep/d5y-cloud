@@ -9,7 +9,7 @@ import (
 	handlerV2 "github.com/ashep/d5y/internal/api/v2"
 	"github.com/ashep/d5y/internal/clientinfo"
 	"github.com/ashep/d5y/internal/update"
-	"github.com/ashep/d5y/internal/weather"
+	"github.com/ashep/d5y/internal/weatherapi"
 	"github.com/ashep/go-app/runner"
 	"github.com/google/go-github/v63/github"
 	"github.com/rs/zerolog"
@@ -17,7 +17,7 @@ import (
 
 type App struct{}
 
-func New(cfg Config, rt *runner.Runtime) (*App, error) {
+func New(cfg *Config, rt *runner.Runtime) (*App, error) {
 	setupServer(cfg, rt.SrvMux, rt.Logger)
 	return &App{}, nil
 }
@@ -27,8 +27,8 @@ func (a *App) Run(ctx context.Context) error {
 	return nil
 }
 
-func setupServer(cfg Config, mux *http.ServeMux, l zerolog.Logger) {
-	weatherSvc := weather.New(cfg.Weather.APIKey)
+func setupServer(cfg *Config, mux *http.ServeMux, l zerolog.Logger) {
+	weatherSvc := weatherapi.New(cfg.Weather.APIKey)
 	githubCli := github.NewClient(http.DefaultClient).WithAuthToken(cfg.GitHub.Token)
 	updSvc := update.New(githubCli, l.With().Str("pkg", "update_svc").Logger())
 

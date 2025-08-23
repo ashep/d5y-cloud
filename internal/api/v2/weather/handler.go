@@ -10,21 +10,18 @@ import (
 	"github.com/ashep/go-app/metrics"
 	"github.com/rs/zerolog"
 
-	"github.com/ashep/d5y/internal/clientinfo"
-	"github.com/ashep/d5y/internal/weather"
+	"github.com/ashep/d5y/internal/weatherapi"
 )
 
-type Response *weather.Data
-
 type Handler struct {
-	weather *weather.Service
-	l       zerolog.Logger
+	wAPI *weatherapi.Service
+	l    zerolog.Logger
 }
 
-func New(weatherCli *weather.Service, l zerolog.Logger) *Handler {
+func New(wAPI *weatherapi.Service, l zerolog.Logger) *Handler {
 	return &Handler{
-		weather: weatherCli,
-		l:       l,
+		wAPI: wAPI,
+		l:    l,
 	}
 }
 
@@ -34,23 +31,20 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
 
 	m := metrics.HTTPServerRequest(req, "/v2/weather")
 
-	ci := clientinfo.FromCtx(req.Context())
-	if ci.RemoteAddr == "" {
+	data, err := h.wAPI.GetFromRequest(req)
+	if errors.Is(err, weatherapi.ErrInvalidArgument) {
+		m(http.StatusBadRequest)
+		l.Warn().Err(fmt.Errorf("call weather api: %w", err)).Msg("weather request failed")
+		rw.WriteHeader(http.StatusBadRequest)
+		return
+	} else if err != nil {
 		m(http.StatusInternalServerError)
-		l.Error().Err(errors.New("missing remote address")).Msg("weather request failed")
+		l.Error().Err(fmt.Errorf("call weather api: %w", err)).Msg("weather request failed")
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	d, err := h.weather.GetForIPAddr(ci.RemoteAddr)
-	if err != nil {
-		m(http.StatusInternalServerError)
-		l.Error().Err(fmt.Errorf("get weather: %w", err)).Msg("weather request failed")
-		rw.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	b, err := json.Marshal(d.Current)
+	b, err := json.Marshal(data.Current)
 	if err != nil {
 		m(http.StatusInternalServerError)
 		l.Error().Err(fmt.Errorf("marshal response: %w", err)).Msg("weather request failed")
