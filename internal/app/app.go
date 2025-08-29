@@ -27,9 +27,9 @@ func New(cfg *Config, rt *runner.Runtime) (*App, error) {
 	githubCli := github.NewClient(http.DefaultClient).WithAuthToken(cfg.GitHub.Token)
 	updSvc := update.New(githubCli, l.With().Str("pkg", "update_svc").Logger())
 
-	lv1 := l.With().Str("pkg", "v1_handler").Logger()
-	hv1 := handlerV1.New(weatherSvc, l)
-	rt.Server.HandleFunc("/api/1", wrapMiddlewares(hv1.Handle, lv1)) // BC
+	logV1 := l.With().Str("pkg", "v1_handler").Logger()
+	hdlV1 := handlerV1.New(weatherSvc, logV1)
+	rt.Server.HandleFunc("/api/1", wrapMiddlewares(hdlV1.Handle, logV1)) // BC
 
 	logV2 := l.With().Str("pkg", "v2_handler").Logger()
 	hdlV2 := handlerV2.New(weatherSvc, updSvc, logV2)
@@ -37,9 +37,9 @@ func New(cfg *Config, rt *runner.Runtime) (*App, error) {
 	rt.Server.Handle("/v2/weather", wrapMiddlewares(hdlV2.HandleWeather, logV2))
 	rt.Server.Handle("/v2/firmware/update", wrapMiddlewares(hdlV2.HandleUpdate, logV2))
 
-	l404 := l.With().Str("pkg", "not_found_handler").Logger()
-	h404 := handlerNotFound.New(l404)
-	rt.Server.HandleFunc("/", wrapMiddlewares(h404.Handle, l404))
+	log404 := l.With().Str("pkg", "404_handler").Logger()
+	hdl404 := handlerNotFound.New(log404)
+	rt.Server.HandleFunc("/", wrapMiddlewares(hdl404.Handle, log404))
 
 	return &App{
 		rt: rt,
