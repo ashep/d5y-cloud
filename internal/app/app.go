@@ -1,7 +1,8 @@
 package app
 
 import (
-	"context"
+	"errors"
+	"fmt"
 	"net/http"
 
 	handlerNotFound "github.com/ashep/d5y/internal/api/notfound"
@@ -10,18 +11,21 @@ import (
 	"github.com/ashep/d5y/internal/clientinfo"
 	"github.com/ashep/d5y/internal/update"
 	"github.com/ashep/d5y/internal/weatherapi"
+	"github.com/ashep/go-app/health"
+	"github.com/ashep/go-app/httpserver"
+	"github.com/ashep/go-app/prommetrics"
 	"github.com/ashep/go-app/runner"
 	"github.com/google/go-github/v63/github"
 	"github.com/rs/zerolog"
 )
 
-type App struct {
-	rt *runner.Runtime
-	l  zerolog.Logger
-}
+func Run(rt *runner.Runtime[Config]) error {
+	cfg := rt.Cfg
+	l := rt.Log
 
-func New(cfg *Config, rt *runner.Runtime) (*App, error) {
-	l := rt.Logger
+	srv := httpserver.New(httpserver.WithAddr(":9000"))
+	health.RegisterServer(srv)
+	prommetrics.RegisterServer(rt.AppName, rt.AppVersion, srv)
 
 	weatherSvc := weatherapi.New(cfg.Weather.APIKey)
 	githubCli := github.NewClient(http.DefaultClient).WithAuthToken(cfg.GitHub.Token)
@@ -29,27 +33,27 @@ func New(cfg *Config, rt *runner.Runtime) (*App, error) {
 
 	logV1 := l.With().Str("pkg", "v1_handler").Logger()
 	hdlV1 := handlerV1.New(weatherSvc, logV1)
-	rt.Server.HandleFunc("/api/1", wrapMiddlewares(hdlV1.Handle, logV1)) // BC
+	srv.HandleFunc("/api/1", wrapMiddlewares(hdlV1.Handle, logV1)) // BC
 
 	logV2 := l.With().Str("pkg", "v2_handler").Logger()
 	hdlV2 := handlerV2.New(weatherSvc, updSvc, logV2)
-	rt.Server.Handle("/v2/time", wrapMiddlewares(hdlV2.HandleTime, logV2))
-	rt.Server.Handle("/v2/weather", wrapMiddlewares(hdlV2.HandleWeather, logV2))
-	rt.Server.Handle("/v2/firmware/update", wrapMiddlewares(hdlV2.HandleUpdate, logV2))
+	srv.Handle("/v2/time", wrapMiddlewares(hdlV2.HandleTime, logV2))
+	srv.Handle("/v2/weather", wrapMiddlewares(hdlV2.HandleWeather, logV2))
+	srv.Handle("/v2/firmware/update", wrapMiddlewares(hdlV2.HandleUpdate, logV2))
 
 	log404 := l.With().Str("pkg", "404_handler").Logger()
 	hdl404 := handlerNotFound.New(log404)
-	rt.Server.HandleFunc("/", wrapMiddlewares(hdl404.Handle, log404))
+	srv.HandleFunc("/", wrapMiddlewares(hdl404.Handle, log404))
 
-	return &App{
-		rt: rt,
-		l:  l,
-	}, nil
-}
+	var resErr error
+	l.Info().Str("addr", srv.Listener().Addr().String()).Msg("starting")
+	if srvErr := srv.Run(rt.Ctx); srvErr != nil {
+		if !errors.Is(srvErr, http.ErrServerClosed) {
+			resErr = errors.Join(resErr, fmt.Errorf("server: %w", srvErr))
+		}
+	}
 
-func (a *App) Run(ctx context.Context) error {
-	a.l.Info().Str("addr", a.rt.Server.Listener().Addr().String()).Msg("starting server")
-	return <-a.rt.Server.Start(ctx)
+	return resErr
 }
 
 func wrapMiddlewares(h http.HandlerFunc, l zerolog.Logger) http.HandlerFunc {

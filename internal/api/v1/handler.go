@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/ashep/d5y/internal/api/rpcutil"
-	"github.com/ashep/go-app/metrics"
+	"github.com/ashep/go-app/prommetrics"
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/clientinfo"
@@ -51,7 +51,7 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
 	l := rpcutil.ReqLog(req, h.l)
 	l.Info().Msg("v1 request")
 
-	m := metrics.HTTPServerRequest(req, "/v1")
+	m := prommetrics.MeasureHTTPClientRequest(req, "/v1")
 
 	ci := clientinfo.FromCtx(req.Context())
 	if ci.RemoteAddr == "" {

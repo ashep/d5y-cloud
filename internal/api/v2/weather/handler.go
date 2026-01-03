@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ashep/d5y/internal/api/rpcutil"
-	"github.com/ashep/go-app/metrics"
+	"github.com/ashep/go-app/prommetrics"
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/weatherapi"
@@ -29,7 +29,7 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
 	l := rpcutil.ReqLog(req, h.l)
 	l.Info().Msg("weather request")
 
-	m := metrics.HTTPServerRequest(req, "/v2/weather")
+	m := prommetrics.MeasureHTTPServerRequest(req, "/v2/weather")
 
 	data, err := h.wAPI.GetFromRequest(req)
 	if errors.Is(err, weatherapi.ErrInvalidArgument) {

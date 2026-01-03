@@ -10,7 +10,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/ashep/d5y/internal/api/rpcutil"
 	"github.com/ashep/d5y/internal/update"
-	"github.com/ashep/go-app/metrics"
+	"github.com/ashep/go-app/prommetrics"
 	"github.com/rs/zerolog"
 )
 
@@ -28,7 +28,7 @@ func New(updSvc *update.Service, l zerolog.Logger) *Handler {
 
 func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) { //nolint:cyclop // later
 	l := rpcutil.ReqLog(req, h.l)
-	m := metrics.HTTPServerRequest(req, "/v2/update")
+	m := prommetrics.MeasureHTTPServerRequest(req, "/v2/update")
 
 	if req.Method != http.MethodGet {
 		m(http.StatusMethodNotAllowed)

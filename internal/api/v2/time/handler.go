@@ -9,7 +9,7 @@ import (
 
 	"github.com/ashep/d5y/internal/api/rpcutil"
 	"github.com/ashep/d5y/internal/weatherapi"
-	"github.com/ashep/go-app/metrics"
+	"github.com/ashep/go-app/prommetrics"
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/clientinfo"
@@ -38,7 +38,7 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
 	l := rpcutil.ReqLog(req, h.l)
 	l.Info().Msg("time request")
 
-	m := metrics.HTTPServerRequest(req, "/v2/time")
+	m := prommetrics.MeasureHTTPServerRequest(req, "/v2/time")
 
 	res := &Response{
 		Value: time.Now().Unix(),

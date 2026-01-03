@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"os"
 	_ "time/tzdata"
 
 	"github.com/ashep/d5y/internal/app"
@@ -8,10 +10,15 @@ import (
 )
 
 func main() {
-	runner.New(app.New).
-		WithConsoleLogWriter().
-		WithDefaultHTTPLogWriter().
-		WithDefaultHTTPServer().
-		WithDefaultMetricsHandler().
+	res := runner.New(app.Run).
+		AddConsoleLogWriter().
+		LoadEnvConfig().
+		LoadConfigFile("config.yml").
+		AddHTTPLogWriter().
 		Run()
+
+	if res != nil {
+		fmt.Println(res.Error())
+		os.Exit(1)
+	}
 }
