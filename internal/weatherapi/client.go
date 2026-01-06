@@ -38,7 +38,7 @@ const (
 	ConditionHeavyHail
 )
 
-type Service struct {
+type Client struct {
 	c      *httpcli.Client
 	apiKey string
 }
@@ -97,14 +97,14 @@ type wAPIResp struct {
 	Current  wAPIRespCurrent  `json:"current"`
 }
 
-func New(apiKey string) *Service {
-	return &Service{
+func New(apiKey string) *Client {
+	return &Client{
 		c:      httpcli.New(),
 		apiKey: apiKey,
 	}
 }
 
-func (s *Service) GetFromRequest(req *http.Request) (*Data, error) {
+func (s *Client) GetForRequest(req *http.Request) (*Data, error) {
 	lat, lng := req.URL.Query().Get("lat"), req.URL.Query().Get("lng")
 
 	if lat != "" && lng != "" && !strings.HasPrefix(lat, "0.") && !strings.HasPrefix(lng, "0.") {
@@ -135,15 +135,15 @@ func (s *Service) GetFromRequest(req *http.Request) (*Data, error) {
 	return s.GetForIPAddr(ci.RemoteAddr)
 }
 
-func (s *Service) GetForIPAddr(addr string) (*Data, error) {
+func (s *Client) GetForIPAddr(addr string) (*Data, error) {
 	return s.get(addr)
 }
 
-func (s *Service) GetForLocation(lat, lng float64) (*Data, error) {
+func (s *Client) GetForLocation(lat, lng float64) (*Data, error) {
 	return s.get(fmt.Sprintf("%f,%f", lat, lng))
 }
 
-func (s *Service) get(query string) (*Data, error) {
+func (s *Client) get(query string) (*Data, error) {
 	if s.apiKey == "" {
 		return nil, fmt.Errorf("empty weather api key")
 	}
