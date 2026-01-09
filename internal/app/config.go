@@ -1,14 +1,19 @@
 package app
 
 type WeatherConfig struct {
-	APIKey string
+	APIKey string `yaml:"api_key"`
+}
+
+type AlertsInUAConfig struct {
+	APIKey string `yaml:"api_key"`
 }
 
 type GitHubConfig struct {
-	Token string
+	Token string `yaml:"token"`
 }
 
 type Config struct {
-	Weather WeatherConfig
-	GitHub  GitHubConfig
+	Weather    WeatherConfig    `yaml:"weather"`
+	AlertsInUA AlertsInUAConfig `yaml:"alerts_in_ua"`
+	GitHub     GitHubConfig     `yaml:"github"`
 }

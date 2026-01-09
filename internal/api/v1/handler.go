@@ -30,11 +30,11 @@ type Response struct {
 }
 
 type Handler struct {
-	weather *weatherapi.Service
+	weather *weatherapi.Client
 	l       zerolog.Logger
 }
 
-func New(w *weatherapi.Service, l zerolog.Logger) *Handler {
+func New(w *weatherapi.Client, l zerolog.Logger) *Handler {
 	return &Handler{
 		weather: w,
 		l:       l,

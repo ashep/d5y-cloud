@@ -23,11 +23,11 @@ type Response struct {
 }
 
 type Handler struct {
-	wAPI *weatherapi.Service
+	wAPI *weatherapi.Client
 	l    zerolog.Logger
 }
 
-func New(wAPI *weatherapi.Service, l zerolog.Logger) *Handler {
+func New(wAPI *weatherapi.Client, l zerolog.Logger) *Handler {
 	return &Handler{
 		wAPI: wAPI,
 		l:    l,
@@ -45,7 +45,7 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Try Weather API, then GeoIP from client info
-	if wAPIData, err := h.wAPI.GetFromRequest(req); err == nil && wAPIData.Location.Timezone != "" {
+	if wAPIData, err := h.wAPI.GetForRequest(req); err == nil && wAPIData.Location.Timezone != "" {
 		res.TZ = wAPIData.Location.Timezone
 		res.TZData = tz.ToPosix(wAPIData.Location.Timezone)
 	} else {
