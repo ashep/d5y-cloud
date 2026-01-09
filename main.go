@@ -12,9 +12,9 @@ import (
 func main() {
 	res := runner.New(app.Run).
 		AddConsoleLogWriter().
+		AddHTTPLogWriter().
 		LoadEnvConfig().
 		LoadConfigFile("config.yml").
-		AddHTTPLogWriter().
 		Run()
 
 	if res != nil {

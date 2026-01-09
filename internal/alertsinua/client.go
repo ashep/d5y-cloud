@@ -29,7 +29,6 @@ type activeAlertsResponse struct {
 }
 
 type Client struct {
-	apiKey       string
 	c            *httpcli.Client
 	activeAlerts map[int]Alert
 	mux          *sync.RWMutex
@@ -38,8 +37,7 @@ type Client struct {
 
 func New(apiKey string, l zerolog.Logger) *Client {
 	return &Client{
-		apiKey:       apiKey,
-		c:            httpcli.New(),
+		c:            httpcli.New(httpcli.WithAuthorization(apiKey)),
 		activeAlerts: make(map[int]Alert),
 		mux:          &sync.RWMutex{},
 		l:            l,
@@ -69,10 +67,8 @@ func (c *Client) Start(ctx context.Context) error {
 }
 
 func (c *Client) refresh() error {
-	u := "https://api.alerts.in.ua/v1/alerts/active.json?token=" + c.apiKey
-
 	res := activeAlertsResponse{}
-	if err := c.c.GetJSON(u, &res); err != nil {
+	if err := c.c.GetJSON("https://api.alerts.in.ua/v1/alerts/active.json", &res); err != nil {
 		return fmt.Errorf("get json: %w", err)
 	}
 
@@ -143,6 +139,6 @@ func regionID(region, city string) int {
 	case "Zaporiz'ka Oblast'", "Запорізька область":
 		return regionZaporizka
 	default:
-		return 0
+		return regionUnknown
 	}
 }

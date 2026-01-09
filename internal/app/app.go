@@ -29,7 +29,7 @@ func Run(rt *runner.Runtime[Config]) error {
 	health.RegisterServer(srv)
 	prommetrics.RegisterServer(rt.AppName, rt.AppVersion, srv)
 
-	airAlertsCli := alertsinua.New(cfg.AlertsInUA.APIKey, l.With().Str("pkg", "alerts_in_ua").Logger())
+	airAlertsCli := alertsinua.New(cfg.AlertsInUA.APIKey, l.With().Str("pkg", "air_raid_alerts").Logger())
 	if err := airAlertsCli.Start(ctx); err != nil {
 		return fmt.Errorf("air raid alerts client: %w", err)
 	}
