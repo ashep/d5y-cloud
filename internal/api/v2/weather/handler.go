@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ashep/d5y/internal/alertsinua"
 	"github.com/ashep/d5y/internal/api/rpcutil"
 	"github.com/ashep/go-app/prommetrics"
 	"github.com/rs/zerolog"
@@ -14,27 +13,15 @@ import (
 	"github.com/ashep/d5y/internal/weatherapi"
 )
 
-type AirRaidAlert struct {
-	Active bool `json:"active,omitempty"`
-}
-
-type Response struct {
-	Location weatherapi.Location      `json:"location"`
-	Current  weatherapi.ConditionItem `json:"current"`
-	AirRaid  AirRaidAlert             `json:"air_raid,omitzero"`
-}
-
 type Handler struct {
-	weather   *weatherapi.Client
-	airAlerts *alertsinua.Client
-	l         zerolog.Logger
+	wAPI *weatherapi.Client
+	l    zerolog.Logger
 }
 
-func New(weatherCli *weatherapi.Client, airAlertsCli *alertsinua.Client, l zerolog.Logger) *Handler {
+func New(wAPI *weatherapi.Client, l zerolog.Logger) *Handler {
 	return &Handler{
-		weather:   weatherCli,
-		airAlerts: airAlertsCli,
-		l:         l,
+		wAPI: wAPI,
+		l:    l,
 	}
 }
 
@@ -44,7 +31,7 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
 
 	m := prommetrics.MeasureHTTPServerRequest(req, "/v2/weather")
 
-	wData, err := h.weather.GetForRequest(req)
+	data, err := h.wAPI.GetForRequest(req)
 	if errors.Is(err, weatherapi.ErrInvalidArgument) {
 		m(http.StatusBadRequest)
 		l.Warn().Err(fmt.Errorf("call weather api: %w", err)).Msg("weather request failed")
@@ -57,15 +44,7 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	rsp := &Response{
-		Location: wData.Location,
-		Current:  wData.Current,
-		AirRaid: AirRaidAlert{
-			Active: h.airAlerts.IsActiveInRegion(wData.Location.Region, wData.Location.Name),
-		},
-	}
-
-	b, err := json.Marshal(rsp)
+	b, err := json.Marshal(data.Current)
 	if err != nil {
 		m(http.StatusInternalServerError)
 		l.Error().Err(fmt.Errorf("marshal response: %w", err)).Msg("weather request failed")
