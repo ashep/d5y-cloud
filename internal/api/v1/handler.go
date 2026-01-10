@@ -12,7 +12,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/ashep/d5y/internal/clientinfo"
-	"github.com/ashep/d5y/internal/weatherapi"
+	"github.com/ashep/d5y/internal/weather"
 )
 
 type Response struct {
@@ -30,11 +30,11 @@ type Response struct {
 }
 
 type Handler struct {
-	weather *weatherapi.Client
+	weather *weather.Client
 	l       zerolog.Logger
 }
 
-func New(w *weatherapi.Client, l zerolog.Logger) *Handler {
+func New(w *weather.Client, l zerolog.Logger) *Handler {
 	return &Handler{
 		weather: w,
 		l:       l,
@@ -95,7 +95,7 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
 	}
 
 	// Add weather data
-	weatherData, err := h.weather.GetForIPAddr(ci.RemoteAddr)
+	weatherData, err := h.weather.WeatherForRequest(req)
 	if err == nil {
 		resp.Weather = true
 		resp.Temp = weatherData.Current.Temp

@@ -9,17 +9,17 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/ashep/d5y/internal/api/rpcutil"
-	"github.com/ashep/d5y/internal/update"
+	"github.com/ashep/d5y/internal/fwupdate"
 	"github.com/ashep/go-app/prommetrics"
 	"github.com/rs/zerolog"
 )
 
 type Handler struct {
-	updSvc *update.Service
+	updSvc *fwupdate.Service
 	l      zerolog.Logger
 }
 
-func New(updSvc *update.Service, l zerolog.Logger) *Handler {
+func New(updSvc *fwupdate.Service, l zerolog.Logger) *Handler {
 	return &Handler{
 		updSvc: updSvc,
 		l:      l,
@@ -65,7 +65,7 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) { //nolint:c
 	}
 
 	rlsSet, err := h.updSvc.List(req.Context(), appS[0], appS[1], appS[2], q.Get("to_alpha") == "1")
-	if errors.Is(err, update.ErrAppNotFound) {
+	if errors.Is(err, fwupdate.ErrAppNotFound) {
 		m(http.StatusNotFound)
 		l.Warn().Err(errors.New("unknown client app")).Msg("firmware update request failed")
 		rpcutil.WriteNotFound(rw, err.Error(), l)
