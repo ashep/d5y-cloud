@@ -1,4 +1,4 @@
-package update
+package fwupdate
 
 import (
 	"github.com/Masterminds/semver/v3"

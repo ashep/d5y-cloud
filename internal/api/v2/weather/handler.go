@@ -10,15 +10,15 @@ import (
 	"github.com/ashep/go-app/prommetrics"
 	"github.com/rs/zerolog"
 
-	"github.com/ashep/d5y/internal/weatherapi"
+	"github.com/ashep/d5y/internal/weather"
 )
 
 type Handler struct {
-	wAPI *weatherapi.Client
+	wAPI *weather.Client
 	l    zerolog.Logger
 }
 
-func New(wAPI *weatherapi.Client, l zerolog.Logger) *Handler {
+func New(wAPI *weather.Client, l zerolog.Logger) *Handler {
 	return &Handler{
 		wAPI: wAPI,
 		l:    l,
@@ -31,8 +31,8 @@ func (h *Handler) Handle(rw http.ResponseWriter, req *http.Request) {
 
 	m := prommetrics.MeasureHTTPServerRequest(req, "/v2/weather")
 
-	data, err := h.wAPI.GetForRequest(req)
-	if errors.Is(err, weatherapi.ErrInvalidArgument) {
+	data, err := h.wAPI.WeatherForRequest(req)
+	if errors.Is(err, weather.ErrInvalidArgument) {
 		m(http.StatusBadRequest)
 		l.Warn().Err(fmt.Errorf("call weather api: %w", err)).Msg("weather request failed")
 		rw.WriteHeader(http.StatusBadRequest)

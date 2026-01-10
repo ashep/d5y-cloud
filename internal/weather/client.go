@@ -1,14 +1,15 @@
-package weatherapi
+package weather
 
 import (
 	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/ashep/d5y/internal/clientinfo"
 	"github.com/ashep/d5y/internal/httpcli"
+	"github.com/dgraph-io/ristretto/v2"
+	"github.com/rs/zerolog"
 )
 
 var (
@@ -38,19 +39,14 @@ const (
 	ConditionHeavyHail
 )
 
-type Client struct {
-	c      *httpcli.Client
-	apiKey string
-}
-
 type Location struct {
-	Name     string
-	Country  string
-	Region   string
-	Lat      float64
-	Lng      float64
-	Timezone string
-	Time     string
+	Name     string  `json:"name"`
+	Country  string  `json:"country"`
+	Region   string  `json:"region"`
+	Lat      float64 `json:"lat"`
+	Lng      float64 `json:"lng"`
+	Timezone string  `json:"timezone"`
+	Time     string  `json:"time"`
 }
 
 type ConditionItem struct {
@@ -97,34 +93,39 @@ type wAPIResp struct {
 	Current  wAPIRespCurrent  `json:"current"`
 }
 
-func New(apiKey string) *Client {
-	return &Client{
-		c:      httpcli.New(),
-		apiKey: apiKey,
-	}
+type Client struct {
+	c        *httpcli.Client
+	apiKey   string
+	locCache *ristretto.Cache[string, Location]
+	l        zerolog.Logger
 }
 
-func (s *Client) GetForRequest(req *http.Request) (*Data, error) {
-	lat, lng := req.URL.Query().Get("lat"), req.URL.Query().Get("lng")
+func New(apiKey string, l zerolog.Logger) (*Client, error) {
+	locCache, err := ristretto.NewCache(&ristretto.Config[string, Location]{
+		NumCounters: 1000,
+		MaxCost:     1024,
+		BufferItems: 64,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("init location cache: %w", err)
+	}
 
-	if lat != "" && lng != "" && !strings.HasPrefix(lat, "0.") && !strings.HasPrefix(lng, "0.") {
-		latF, err := strconv.ParseFloat(lat, 32)
-		if err != nil {
-			return nil, fmt.Errorf("%w: lat: %w", ErrInvalidArgument, err)
-		}
-		if latF < -90 || latF > 90 {
-			return nil, fmt.Errorf("%w: lat is out of range: %v", ErrInvalidArgument, latF)
-		}
+	return &Client{
+		c:        httpcli.New(),
+		apiKey:   apiKey,
+		locCache: locCache,
+		l:        l,
+	}, nil
+}
 
-		lngF, err := strconv.ParseFloat(lng, 32)
-		if err != nil {
-			return nil, fmt.Errorf("%w: lng: %w", ErrInvalidArgument, err)
-		}
-		if lngF < -180 || lngF > 180 {
-			return nil, fmt.Errorf("%w: lng is out of range: %v", ErrInvalidArgument, latF)
-		}
+func (c *Client) WeatherForRequest(req *http.Request) (*Data, error) {
+	lat, lng, err := getLatLngFromReqQuery(req)
+	if err != nil {
+		return nil, fmt.Errorf("get lat, lng from request: %w", err)
+	}
 
-		return s.GetForLocation(latF, lngF)
+	if lat != 0 && lng != 0 {
+		return c.weatherForLocation(lat, lng)
 	}
 
 	ci := clientinfo.FromCtx(req.Context())
@@ -132,26 +133,49 @@ func (s *Client) GetForRequest(req *http.Request) (*Data, error) {
 		return nil, errors.New("missing remote address in client info")
 	}
 
-	return s.GetForIPAddr(ci.RemoteAddr)
+	return c.weatherForIPAddr(ci.RemoteAddr)
 }
 
-func (s *Client) GetForIPAddr(addr string) (*Data, error) {
-	return s.get(addr)
+func (c *Client) LocationForRequest(req *http.Request) (Location, error) {
+	ci := clientinfo.FromCtx(req.Context())
+	cKey := fmt.Sprintf("%s_%s", req.URL.RequestURI(), ci.RemoteAddr)
+
+	res, ok := c.locCache.Get(cKey)
+	if ok {
+		return res, nil
+	}
+
+	w, err := c.WeatherForRequest(req)
+	if err != nil {
+		return Location{}, err
+	}
+
+	if ok := c.locCache.Set(cKey, w.Location, 1); !ok {
+		c.l.Warn().Msg("location cache set failed")
+	} else {
+		c.locCache.Wait()
+	}
+
+	return w.Location, nil
 }
 
-func (s *Client) GetForLocation(lat, lng float64) (*Data, error) {
-	return s.get(fmt.Sprintf("%f,%f", lat, lng))
+func (c *Client) weatherForIPAddr(addr string) (*Data, error) {
+	return c.getWeather(addr)
 }
 
-func (s *Client) get(query string) (*Data, error) {
-	if s.apiKey == "" {
+func (c *Client) weatherForLocation(lat, lng float64) (*Data, error) {
+	return c.getWeather(fmt.Sprintf("%f,%f", lat, lng))
+}
+
+func (c *Client) getWeather(query string) (*Data, error) {
+	if c.apiKey == "" {
 		return nil, fmt.Errorf("empty weather api key")
 	}
 
-	apiURL := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", s.apiKey, query)
+	apiURL := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%s&q=%s", c.apiKey, query)
 	owRes := &wAPIResp{}
 
-	err := s.c.GetJSON(apiURL, owRes)
+	err := c.c.GetJSON(apiURL, owRes)
 	if err != nil {
 		return nil, err
 	}
@@ -176,6 +200,32 @@ func (s *Client) get(query string) (*Data, error) {
 	}
 
 	return res, nil
+}
+
+func getLatLngFromReqQuery(req *http.Request) (float64, float64, error) {
+	lat, lng := req.URL.Query().Get("lat"), req.URL.Query().Get("lng")
+
+	if lat == "" || lng == "" {
+		return 0, 0, nil
+	}
+
+	latF, err := strconv.ParseFloat(lat, 32)
+	if err != nil {
+		return 0, 0, fmt.Errorf("%w: lat: %w", ErrInvalidArgument, err)
+	}
+	if latF < -90 || latF > 90 {
+		return 0, 0, fmt.Errorf("%w: lat is out of range: %v", ErrInvalidArgument, latF)
+	}
+
+	lngF, err := strconv.ParseFloat(lng, 32)
+	if err != nil {
+		return 0, 0, fmt.Errorf("%w: lng: %w", ErrInvalidArgument, err)
+	}
+	if lngF < -180 || lngF > 180 {
+		return 0, 0, fmt.Errorf("%w: lng is out of range: %v", ErrInvalidArgument, latF)
+	}
+
+	return latF, lngF, nil
 }
 
 func mapWeatherAPIConditionID(id int) ConditionID {
