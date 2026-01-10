@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ashep/d5y/internal/clientinfo"
 	"github.com/ashep/d5y/internal/httpcli"
@@ -205,7 +206,7 @@ func (c *Client) getWeather(query string) (*Data, error) {
 func getLatLngFromReqQuery(req *http.Request) (float64, float64, error) {
 	lat, lng := req.URL.Query().Get("lat"), req.URL.Query().Get("lng")
 
-	if lat == "" || lng == "" {
+	if lat == "" || lng == "" || strings.HasPrefix(lat, "0.") || strings.HasPrefix(lng, "0.") {
 		return 0, 0, nil
 	}
 
