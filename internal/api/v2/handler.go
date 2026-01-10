@@ -3,7 +3,6 @@ package v2
 import (
 	"net/http"
 
-	"github.com/ashep/d5y/internal/alertsinua"
 	"github.com/rs/zerolog"
 
 	timeh "github.com/ashep/d5y/internal/api/v2/time"
@@ -19,10 +18,10 @@ type Handler struct {
 	update  *updateh.Handler
 }
 
-func New(wCli *weatherapi.Client, arCli *alertsinua.Client, updSvc *update.Service, l zerolog.Logger) *Handler {
+func New(wAPI *weatherapi.Client, updSvc *update.Service, l zerolog.Logger) *Handler {
 	return &Handler{
-		time:    timeh.New(wCli, l.With().Str("handler", "time").Logger()),
-		weather: weatherh.New(wCli, arCli, l.With().Str("handler", "weather").Logger()),
+		time:    timeh.New(wAPI, l.With().Str("handler", "time").Logger()),
+		weather: weatherh.New(wAPI, l.With().Str("handler", "weather").Logger()),
 		update:  updateh.New(updSvc, l),
 	}
 }

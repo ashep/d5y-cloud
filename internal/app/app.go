@@ -43,7 +43,7 @@ func Run(rt *runner.Runtime[Config]) error {
 	srv.HandleFunc("/api/1", wrapMiddlewares(hdlV1.Handle, logV1)) // BC
 
 	logV2 := l.With().Str("pkg", "v2_handler").Logger()
-	hdlV2 := handlerV2.New(weatherCli, airAlertsCli, updSvc, logV2)
+	hdlV2 := handlerV2.New(weatherCli, updSvc, logV2)
 	srv.Handle("/v2/time", wrapMiddlewares(hdlV2.HandleTime, logV2))
 	srv.Handle("/v2/weather", wrapMiddlewares(hdlV2.HandleWeather, logV2))
 	srv.Handle("/v2/firmware/update", wrapMiddlewares(hdlV2.HandleUpdate, logV2))
