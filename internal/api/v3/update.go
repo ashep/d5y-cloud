@@ -89,6 +89,7 @@ func (h *Handler) HandleFirmwareUpdate(rw http.ResponseWriter, req *http.Request
 		return
 	}
 
+	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
 
 	if _, err := rw.Write(b); err != nil {

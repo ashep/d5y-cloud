@@ -46,7 +46,6 @@ func FromRequest(req *http.Request, l zerolog.Logger) Info {
 	}
 
 	// Strip port if present
-	strings.Split(res.RemoteAddr, ":")
 	if idx := strings.LastIndex(res.RemoteAddr, ":"); idx != -1 {
 		res.RemoteAddr = res.RemoteAddr[:idx]
 	}
