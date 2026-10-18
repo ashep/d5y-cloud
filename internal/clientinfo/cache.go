@@ -20,19 +20,19 @@ func NewCache() *Cache {
 	return &Cache{c: c}
 }
 
-func (c *Cache) Get(k string) (Info, bool) {
-	return c.c.GetIfPresent(k)
+func (c *Cache) Get(id string) (Info, bool) {
+	return c.c.GetIfPresent(id)
 }
 
-func (c *Cache) Set(info Info) Info {
+func (c *Cache) Set(id string, cliInfo Info) Info {
 	// Location reported by device has priority over IP-address-based one
-	cur, curOk := c.c.GetIfPresent(info.RemoteAddr)
-	if curOk && !cur.LatLngFromReq && info.LatLngFromReq {
-		c.c.Invalidate(info.RemoteAddr)
+	cur, curOk := c.c.GetIfPresent(id)
+	if curOk && !cur.LatLngFromReq && cliInfo.LatLngFromReq {
+		c.c.Invalidate(id)
 	}
 
 	// Here the item replaced only if it is expired
-	info, _ = c.c.Set(info.RemoteAddr, info)
+	cliInfo, _ = c.c.Set(id, cliInfo)
 
-	return info
+	return cliInfo
 }

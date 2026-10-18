@@ -2,6 +2,8 @@ package clientinfo
 
 import (
 	"context"
+	"crypto/sha1"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -37,26 +39,31 @@ func FromCtx(ctx context.Context) Info {
 }
 
 func FromRequest(req *http.Request, cache *Cache, bdc *bigdatacloud.Client, l zerolog.Logger) Info {
+
+	addr := req.Header.Get("cf-connecting-ip")
+	if addr == "" {
+		addr = req.Header.Get("x-forwarded-for")
+	}
+	if addr == "" {
+		addr = req.RemoteAddr
+	}
+	if idx := strings.LastIndex(addr, ":"); idx != -1 { // strip port
+		addr = addr[:idx]
+	}
+
+	id := strings.TrimSpace(strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer"))
+	if id == "" {
+		id = "ip-" + fmt.Sprintf("%x", sha1.New().Sum([]byte(addr))[:6])
+	}
+
+	if v, ok := cache.Get(id); ok && v.LatLngFromReq {
+		return v
+	}
+
 	info := Info{
-		ID:         strings.TrimSpace(strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer")),
-		RemoteAddr: req.Header.Get("cf-connecting-ip"),
+		ID:         id,
+		RemoteAddr: addr,
 		UserAgent:  req.UserAgent(),
-	}
-
-	if info.RemoteAddr == "" {
-		info.RemoteAddr = req.Header.Get("x-forwarded-for")
-	}
-	if info.RemoteAddr == "" {
-		info.RemoteAddr = req.RemoteAddr
-	}
-	if idx := strings.LastIndex(info.RemoteAddr, ":"); idx != -1 { // strip port
-		info.RemoteAddr = info.RemoteAddr[:idx]
-	}
-
-	if info.RemoteAddr != "" {
-		if v, ok := cache.Get(info.RemoteAddr); ok && v.LatLngFromReq {
-			return v
-		}
 	}
 
 	if ua := strings.Split(info.UserAgent, ":"); len(ua) == 4 {
@@ -66,7 +73,7 @@ func FromRequest(req *http.Request, cache *Cache, bdc *bigdatacloud.Client, l ze
 		info.Version = ua[3]
 	}
 
-	return cache.Set(enrichGeoData(req, info, bdc, l))
+	return cache.Set(id, enrichGeoData(req, info, bdc, l))
 }
 
 func enrichGeoData(req *http.Request, info Info, bdc *bigdatacloud.Client, l zerolog.Logger) Info {
