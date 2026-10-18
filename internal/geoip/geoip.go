@@ -18,8 +18,8 @@ type Data struct {
 	CountryCode string  `json:"countryCode,omitempty"`
 	CountryName string  `json:"country,omitempty"`
 	IP          string  `json:"ip,omitempty"`
-	Latitude    float64 `json:"lat,omitempty"`
-	Longitude   float64 `json:"lon,omitempty"`
+	Lat         float64 `json:"lat,omitempty"`
+	Lon         float64 `json:"lon,omitempty"`
 	RegionCode  string  `json:"region,omitempty"`
 	RegionName  string  `json:"regionName,omitempty"`
 	Timezone    string  `json:"timezone,omitempty"`

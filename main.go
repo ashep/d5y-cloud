@@ -14,7 +14,6 @@ func main() {
 		AddConsoleLogWriter().
 		AddHTTPLogWriter().
 		LoadEnvConfig().
-		LoadConfigFile("config.yml").
 		Run()
 
 	if res != nil {

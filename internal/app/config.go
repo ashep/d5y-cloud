@@ -12,8 +12,13 @@ type GitHubConfig struct {
 	Token string `yaml:"token"`
 }
 
+type BigDataCloudConfig struct {
+	APIKey string `yaml:"api_key"`
+}
+
 type Config struct {
-	Weather    WeatherConfig    `yaml:"weather"`
-	AlertsInUA AlertsInUAConfig `yaml:"alerts_in_ua"`
-	GitHub     GitHubConfig     `yaml:"github"`
+	Weather      WeatherConfig      `yaml:"weather"`
+	AlertsInUA   AlertsInUAConfig   `yaml:"alerts_in_ua"`
+	GitHub       GitHubConfig       `yaml:"github"`
+	BigDataCloud BigDataCloudConfig `yaml:"big_data_cloud"`
 }
