@@ -149,6 +149,15 @@ func (s *Service) List(
 					continue
 				}
 
+				if isBootloaderAsset(ast.GetName(), repoName) {
+					s.l.Debug().
+						Str("repo", repoFullName).
+						Str("tag_name", tagName).
+						Str("asset_name", ast.GetName()).
+						Msg("skip asset: bootloader image")
+					continue
+				}
+
 				if !strings.Contains(ast.GetName(), arch) {
 					s.l.Debug().
 						Str("repo", repoFullName).
@@ -224,4 +233,10 @@ func (s *Service) assetChecksum(ctx context.Context, url string) string {
 	s.checkSumCache[url] = v
 
 	return v
+}
+
+// isBootloaderAsset reports whether the asset is a bootloader image published alongside the app image,
+// e.g. "cronus-bootloader-0.0.5-esp32s3_ws2812v32x16.bin". Bootloader images must never be served as OTA updates.
+func isBootloaderAsset(name, repoName string) bool {
+	return strings.HasPrefix(name, repoName+"-bootloader-")
 }
