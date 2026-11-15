@@ -14,25 +14,16 @@ type Cache struct {
 func NewCache() *Cache {
 	c := otter.Must(&otter.Options[string, Info]{
 		MaximumSize:      1000,
-		ExpiryCalculator: otter.ExpiryAccessing[string, Info](time.Hour),
+		ExpiryCalculator: otter.ExpiryWriting[string, Info](time.Hour),
 	})
 
 	return &Cache{c: c}
 }
 
-func (c *Cache) Get(id string) (Info, bool) {
-	return c.c.GetIfPresent(id)
+func (c *Cache) Get(key string) (Info, bool) {
+	return c.c.GetIfPresent(key)
 }
 
-func (c *Cache) Set(id string, cliInfo Info) Info {
-	// Location reported by device has priority over IP-address-based one
-	cur, curOk := c.c.GetIfPresent(id)
-	if curOk && !cur.LatLngFromReq && cliInfo.LatLngFromReq {
-		c.c.Invalidate(id)
-	}
-
-	// Here the item replaced only if it is expired
-	cliInfo, _ = c.c.Set(id, cliInfo)
-
-	return cliInfo
+func (c *Cache) Set(key string, info Info) {
+	c.c.Set(key, info)
 }

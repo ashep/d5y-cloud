@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/sha1"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -14,19 +16,19 @@ import (
 )
 
 type Info struct {
-	RemoteAddr    string
-	UserAgent     string
-	ID            string
-	Vendor        string
-	Name          string
-	Version       string
-	Hardware      string
-	Country       string
-	City          string
-	Timezone      string
-	Lat           float64
-	Lon           float64
-	LatLngFromReq bool
+	RemoteAddr          string
+	UserAgent           string
+	ID                  string
+	Vendor              string
+	Name                string
+	Version             string
+	Hardware            string
+	Country             string
+	City                string
+	Timezone            string
+	Lat                 float64
+	Lon                 float64
+	LocationSetByDevice bool
 }
 
 type ctxKeyType string
@@ -39,7 +41,6 @@ func FromCtx(ctx context.Context) Info {
 }
 
 func FromRequest(req *http.Request, cache *Cache, bdc *bigdatacloud.Client, l zerolog.Logger) Info {
-
 	addr := req.Header.Get("cf-connecting-ip")
 	if addr == "" {
 		addr = req.Header.Get("x-forwarded-for")
@@ -47,25 +48,41 @@ func FromRequest(req *http.Request, cache *Cache, bdc *bigdatacloud.Client, l ze
 	if addr == "" {
 		addr = req.RemoteAddr
 	}
-	if idx := strings.LastIndex(addr, ":"); idx != -1 { // strip port
-		addr = addr[:idx]
+	if host, _, err := net.SplitHostPort(addr); err == nil {
+		addr = host
 	}
 
-	id := strings.TrimSpace(strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer"))
-	if id == "" {
-		id = "ip-" + fmt.Sprintf("%x", sha1.New().Sum([]byte(addr))[:6])
+	addrSum := sha1.Sum([]byte(addr))
+
+	clientID := strings.TrimSpace(strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer"))
+	if clientID == "" {
+		clientID = fmt.Sprintf("ip-%x", addrSum[:6])
 	}
 
-	if v, ok := cache.Get(id); ok && v.LatLngFromReq {
+	lat, lng := parseLocationFromQueryString(req.URL.Query())
+	cKey := fmt.Sprintf("%s:%x:%s:%f:%f", clientID, addrSum, req.UserAgent(), lat, lng)
+
+	if v, ok := cache.Get(cKey); ok {
 		return v
 	}
 
-	info := Info{
-		ID:         id,
-		RemoteAddr: addr,
-		UserAgent:  req.UserAgent(),
+	info := withUserAgent(Info{ID: clientID}, req, addr)
+	info = withGeolocation(info, req, bdc, l)
+
+	// Avoid excessive requests to reverse geocoding service
+	if info.LocationSetByDevice {
+		cache.Set(cKey, info)
 	}
 
+	return info
+}
+
+// withUserAgent sets user-agent-specific data from request
+func withUserAgent(info Info, req *http.Request, addr string) Info {
+	info.RemoteAddr = addr
+	info.UserAgent = req.UserAgent()
+
+	info.Vendor, info.Name, info.Hardware, info.Version = "", "", "", ""
 	if ua := strings.Split(info.UserAgent, ":"); len(ua) == 4 {
 		info.Vendor = ua[0]
 		info.Name = ua[1]
@@ -73,15 +90,18 @@ func FromRequest(req *http.Request, cache *Cache, bdc *bigdatacloud.Client, l ze
 		info.Version = ua[3]
 	}
 
-	return cache.Set(id, enrichGeoData(req, info, bdc, l))
+	return info
 }
 
-func enrichGeoData(req *http.Request, info Info, bdc *bigdatacloud.Client, l zerolog.Logger) Info {
+// withGeolocation tries to enrich Info with geolocation data.
+func withGeolocation(info Info, req *http.Request, bdc *bigdatacloud.Client, l zerolog.Logger) Info {
 	if info.RemoteAddr == "" {
 		return info
 	}
 
-	if lat, lng := parseLatLonFromRequest(req); lat != 0 && lng != 0 {
+	// If the remote device tells us its location, use it
+	info.LocationSetByDevice = false
+	if lat, lng := parseLocationFromQueryString(req.URL.Query()); lat != 0 && lng != 0 {
 		if data, err := bdc.ReverseGeocoding.ReverseGeocodeWithTimezone(req.Context(), lat, lng, "en"); err != nil {
 			l.Error().Err(err).Msg("reverse geo lookup failed")
 		} else {
@@ -90,11 +110,12 @@ func enrichGeoData(req *http.Request, info Info, bdc *bigdatacloud.Client, l zer
 			info.Timezone = data.TimeZone.IANATimeID
 			info.Lat = lat
 			info.Lon = lng
-			info.LatLngFromReq = true
+			info.LocationSetByDevice = true
 			return info
 		}
 	}
 
+	// If the remote device do not tell us its location, try to detect it by IP address
 	if data, err := geoip.Get(info.RemoteAddr); err != nil {
 		l.Error().Err(err).Msg("geoip lookup failed")
 	} else {
@@ -103,15 +124,12 @@ func enrichGeoData(req *http.Request, info Info, bdc *bigdatacloud.Client, l zer
 		info.Timezone = data.Timezone
 		info.Lat = data.Lat
 		info.Lon = data.Lon
-		info.LatLngFromReq = false
 	}
 
 	return info
 }
 
-func parseLatLonFromRequest(req *http.Request) (lat, lng float64) {
-	q := req.URL.Query()
-
+func parseLocationFromQueryString(q url.Values) (lat, lng float64) {
 	latS, lngS := q.Get("lat"), q.Get("lng")
 	if latS == "" || lngS == "" {
 		return
