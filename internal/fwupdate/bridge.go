@@ -24,37 +24,21 @@ func needsHTTPBridge(owner, name string, v *semver.Version) bool {
 		strings.HasPrefix(v.Prerelease(), "alpha")
 }
 
-// 0.0.1-alpha1 reports a bare arch without a hardware id, which matches images for every display
-// type. MAX7219 was the only hardware back then, so its image is picked for that version.
-var (
-	httpBridgeNoHWIDVersion = semver.MustParse("0.0.1-alpha1")
-	httpBridgeNoHWIDSuffix  = "-esp32s3_max7219v32x16.bin"
-)
-
-// httpBridge returns the bridge target release with the asset URL pointing to the HTTP mirror.
+// httpBridge returns the bridge target release with asset URLs pointing to the HTTP mirror.
 //
-// It returns nil if the target release is absent or the asset choice is ambiguous.
-func (r ReleaseSet) httpBridge(current *semver.Version) *Release {
+// It returns nil if the target release is absent or the asset choice is ambiguous: 0.0.1-alpha1
+// reports a bare arch without a hardware id, which matches images for every display type.
+func (r ReleaseSet) httpBridge() *Release {
 	for _, rel := range r.List {
 		if !rel.Version.Equal(httpBridgeTarget) {
 			continue
 		}
 
-		assets := rel.Assets
-		if len(assets) > 1 && current.Equal(httpBridgeNoHWIDVersion) {
-			assets = nil
-			for _, a := range rel.Assets {
-				if strings.HasSuffix(a.Name, httpBridgeNoHWIDSuffix) {
-					assets = append(assets, a)
-				}
-			}
-		}
-
-		if len(assets) != 1 {
+		if len(rel.Assets) != 1 {
 			return nil
 		}
 
-		ast := assets[0]
+		ast := rel.Assets[0]
 		ast.URL = httpBridgeMirror + ast.Name
 
 		return &Release{Version: rel.Version, Assets: []Asset{ast}}

@@ -39,7 +39,7 @@ func (r ReleaseSet) Next(current *semver.Version) *Release {
 	}
 
 	if needsHTTPBridge(r.Owner, r.Name, current) {
-		return r.httpBridge(current)
+		return r.httpBridge()
 	}
 
 	if excVerSrc.Contains(r.Owner, r.Name, current) {
