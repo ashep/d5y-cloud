@@ -96,8 +96,26 @@ func TestNextHTTPBridgeNotApplied(t *testing.T) {
 		set := ReleaseSet{Owner: "ashep", Name: "cronus", List: []Release{
 			testRelease("0.0.1", "cronus-0.0.1-esp32s3_max7219v32x16.bin", "cronus-0.0.1-esp32s3_ws2812v32x16.bin"),
 		}}
-		if got := set.Next(semver.MustParse("0.0.1-alpha1")); got != nil {
+		if got := set.Next(semver.MustParse("0.0.1-alpha2")); got != nil {
 			t.Fatalf("got %+v, want nil", got)
 		}
 	})
+}
+
+func TestNextHTTPBridgeAlpha1PicksMAX7219(t *testing.T) {
+	const max7219 = "cronus-0.0.1-esp32s3_max7219v32x16.bin"
+
+	// alpha1 reports a bare "esp32s3" arch, so every display type's image matches it.
+	set := ReleaseSet{Owner: "ashep", Name: "cronus", List: []Release{
+		testRelease("0.0.1", "cronus-0.0.1-esp32s3_ws2812v32x16.bin", max7219),
+	}}
+
+	got := set.Next(semver.MustParse("0.0.1-alpha1"))
+	if got == nil || len(got.Assets) != 1 {
+		t.Fatalf("got %+v, want a single asset", got)
+	}
+
+	if want := "http://33v.xyz/" + max7219; got.Assets[0].URL != want {
+		t.Errorf("url = %q, want %q", got.Assets[0].URL, want)
+	}
 }
