@@ -56,15 +56,21 @@ func FromRequest(req *http.Request, cache *Cache, bdc *bigdatacloud.Client, l ze
 		id = "ip-" + fmt.Sprintf("%x", sha1.New().Sum([]byte(addr))[:6])
 	}
 
+	// Cached entries keep geo data only; request-specific fields are always taken from the current request,
+	// otherwise a device would be reported with its pre-OTA version for as long as it stays in the cache.
 	if v, ok := cache.Get(id); ok && v.LatLngFromReq {
-		return v
+		return withRequestFields(v, req, addr)
 	}
 
-	info := Info{
-		ID:         id,
-		RemoteAddr: addr,
-		UserAgent:  req.UserAgent(),
-	}
+	info := withRequestFields(Info{ID: id}, req, addr)
+
+	return withRequestFields(cache.Set(id, enrichGeoData(req, info, bdc, l)), req, addr)
+}
+
+func withRequestFields(info Info, req *http.Request, addr string) Info {
+	info.RemoteAddr = addr
+	info.UserAgent = req.UserAgent()
+	info.Vendor, info.Name, info.Hardware, info.Version = "", "", "", ""
 
 	if ua := strings.Split(info.UserAgent, ":"); len(ua) == 4 {
 		info.Vendor = ua[0]
@@ -73,7 +79,7 @@ func FromRequest(req *http.Request, cache *Cache, bdc *bigdatacloud.Client, l ze
 		info.Version = ua[3]
 	}
 
-	return cache.Set(id, enrichGeoData(req, info, bdc, l))
+	return info
 }
 
 func enrichGeoData(req *http.Request, info Info, bdc *bigdatacloud.Client, l zerolog.Logger) Info {
