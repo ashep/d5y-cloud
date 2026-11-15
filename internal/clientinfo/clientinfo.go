@@ -67,9 +67,10 @@ func FromRequest(req *http.Request, cache *Cache, bdc *bigdatacloud.Client, l ze
 	}
 
 	info := withUserAgent(Info{ID: clientID}, req, addr)
+	info = withGeolocation(info, req, bdc, l)
 
-	if info = withGeolocation(info, req, bdc, l); info.LocationSetByDevice {
-		// Cache only cases where location is told by device to avoid excessive requests to reverse geocoding service
+	// Avoid excessive requests to reverse geocoding service
+	if info.LocationSetByDevice {
 		cache.Set(cKey, info)
 	}
 
