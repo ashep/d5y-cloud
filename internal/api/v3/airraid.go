@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ashep/d5y/internal/alertsinua"
 	"github.com/ashep/d5y/internal/api/rpcutil"
 	"github.com/ashep/go-app/prommetrics"
 )
@@ -27,8 +28,11 @@ func (h *Handler) HandleAirRaid(rw http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	place := alertsinua.Locate(loc.Lat, loc.Lng, loc.Region, loc.Name)
+	l = l.With().Int("oblast_uid", place.OblastUID).Str("raion", place.Raion).Logger()
+
 	res := AirRaidAlertResponse{
-		Active: h.airRaid.IsActiveInRegion(loc.Region, loc.Name),
+		Active: h.airRaid.IsActive(place),
 	}
 
 	b, err := json.Marshal(res)
