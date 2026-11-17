@@ -49,23 +49,31 @@ func TestLocationUID(t *testing.T) {
 
 func TestAirRaidAlertsByUID(t *testing.T) {
 	alerts := []Alert{
-		{Title: "Харківська область", LocationType: "oblast", LocationUID: "22", AlertType: "air_raid"},
-		{Title: "м. Київ", LocationType: "city", LocationUID: "31", AlertType: "air_raid"},
-		{Title: "Нікопольська громада", LocationType: "hromada", LocationUID: "351", AlertType: "air_raid"},
-		{Title: "Херсонський район", LocationType: "raion", LocationUID: "125", AlertType: "air_raid"},
-		{Title: "м. Харків", LocationType: "city", LocationUID: "124", AlertType: "air_raid"},
-		{Title: "Запорізька область", LocationType: "oblast", LocationUID: "12", AlertType: "artillery_shelling"},
+		{Title: "Ізюмський район", LocationType: "raion", LocationUID: "125", Oblast: "Харківська область", AlertType: "air_raid"},
+		{Title: "Харківська область", LocationType: "oblast", LocationUID: "22", Oblast: "Харківська область", AlertType: "air_raid"},
+		{Title: "м. Київ", LocationType: "city", LocationUID: "31", Oblast: "м. Київ", AlertType: "air_raid"},
+		{Title: "Бучанський район", LocationType: "raion", LocationUID: "75", Oblast: "Київська область", AlertType: "air_raid"},
+		{Title: "м. Дніпро", LocationType: "city", LocationUID: "332", Oblast: "Дніпропетровська область", AlertType: "air_raid"},
+		{Title: "Покровська громада", LocationType: "hromada", LocationUID: "351", Oblast: "Донецька область", AlertType: "air_raid"},
+		{Title: "Запорізька область", LocationType: "oblast", LocationUID: "12", Oblast: "Запорізька область", AlertType: "artillery_shelling"},
+		{Title: "Миколаївський район", LocationType: "raion", LocationUID: "98", Oblast: "Миколаївська область", AlertType: "urban_fights"},
 		{Title: "Broken", LocationType: "oblast", LocationUID: "", AlertType: "air_raid"},
+		{Title: "Unknown", LocationType: "raion", LocationUID: "999", Oblast: "Nowhere", AlertType: "air_raid"},
 	}
 
 	got := airRaidAlertsByUID(alerts)
 
-	if len(got) != 2 {
-		t.Fatalf("got %d alerts, want 2: %v", len(got), got)
+	want := []int{uidKharkivska, uidKyiv, uidKyivska, uidDnipropetrovska}
+	if len(got) != len(want) {
+		t.Fatalf("got %d alerts, want %d: %v", len(got), len(want), got)
 	}
-	for _, uid := range []int{uidKharkivska, uidKyiv} {
+	for _, uid := range want {
 		if _, ok := got[uid]; !ok {
 			t.Errorf("alert for uid %d is missing", uid)
 		}
+	}
+
+	if got[uidKharkivska].LocationType != "oblast" {
+		t.Errorf("whole-oblast alert should be preferred, got %+v", got[uidKharkivska])
 	}
 }
