@@ -24,6 +24,7 @@ type Alert struct {
 	Title        string `json:"location_title"`
 	LocationType string `json:"location_type"`
 	LocationUID  string `json:"location_uid"`
+	Oblast       string `json:"location_oblast"`
 	AlertType    string `json:"alert_type"`
 }
 
@@ -103,9 +104,12 @@ func (c *Client) refresh() error {
 	return nil
 }
 
-// airRaidAlertsByUID returns air raid alerts declared for whole oblasts and special-status cities.
-// Alerts of other types (shelling, etc.) and partial alerts (raions, hromadas, ordinary cities) are ignored,
-// because the client location is known only up to the oblast.
+// airRaidAlertsByUID returns air raid alerts keyed by the UID of the oblast (or special-status city) they belong to.
+//
+// The client location is known only up to the oblast, while most alerts are declared per raion,
+// so an oblast is considered alerted when it has an air raid alert for the whole oblast, any of its raions
+// or cities. Hromada-level alerts are ignored: on the front line they last for months and would keep
+// the whole oblast permanently alerted. Alerts of other types (shelling, etc.) are ignored as well.
 func airRaidAlertsByUID(alerts []Alert) map[int]Alert {
 	res := make(map[int]Alert)
 
@@ -114,15 +118,26 @@ func airRaidAlertsByUID(alerts []Alert) map[int]Alert {
 			continue
 		}
 
-		uid, err := strconv.Atoi(a.LocationUID)
-		if err != nil {
+		var uid int
+		switch a.LocationType {
+		case "oblast":
+			var err error
+			if uid, err = strconv.Atoi(a.LocationUID); err != nil {
+				continue
+			}
+		case "raion", "city":
+			// Kyiv and Sevastopol are special-status cities with their own UIDs; location_oblast points to them.
+			uid = locationUID(a.Oblast, "")
+		default:
 			continue
 		}
 
-		switch {
-		case a.LocationType == "oblast":
-		case a.LocationType == "city" && (uid == uidKyiv || uid == uidSevastopol):
-		default:
+		if uid == uidUnknown {
+			continue
+		}
+
+		// Prefer the whole-oblast alert for logging.
+		if prev, ok := res[uid]; ok && prev.LocationType == "oblast" {
 			continue
 		}
 
@@ -132,8 +147,8 @@ func airRaidAlertsByUID(alerts []Alert) map[int]Alert {
 	return res
 }
 
-// IsActiveInRegion reports whether an air raid alert is declared for the whole oblast
-// (or the special-status city, like Kyiv) the given location belongs to.
+// IsActiveInRegion reports whether an air raid alert is declared anywhere in the oblast
+// (or the special-status city, like Kyiv) the given location belongs to, see airRaidAlertsByUID.
 func (c *Client) IsActiveInRegion(region, city string) bool {
 	uid := locationUID(region, city)
 	if uid == uidUnknown {
