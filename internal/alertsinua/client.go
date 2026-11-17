@@ -3,6 +3,7 @@ package alertsinua
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -11,17 +12,19 @@ import (
 )
 
 const (
-	regionUnknown = iota
-	regionKyiv
-	regionKyivska
-	regionMykolaivska
-	regionZakarpatska
-	regionZaporizka
+	activeAlertsURL = "https://api.alerts.in.ua/v1/alerts/active.json"
+
+	// alerts.in.ua allows 8-10 requests per minute per IP, so 2 per minute is well within the limit.
+	refreshInterval = 30 * time.Second
+
+	alertTypeAirRaid = "air_raid"
 )
 
 type Alert struct {
-	City   string `json:"location_title"`
-	Region string `json:"location_oblast"`
+	Title        string `json:"location_title"`
+	LocationType string `json:"location_type"`
+	LocationUID  string `json:"location_uid"`
+	AlertType    string `json:"alert_type"`
 }
 
 type activeAlertsResponse struct {
@@ -30,7 +33,7 @@ type activeAlertsResponse struct {
 
 type Client struct {
 	c            *httpcli.Client
-	activeAlerts map[int]Alert
+	activeAlerts map[int]Alert // keyed by location UID
 	mux          *sync.RWMutex
 	l            zerolog.Logger
 }
@@ -44,101 +47,103 @@ func New(apiKey string, l zerolog.Logger) *Client {
 	}
 }
 
+// Start performs the initial refresh and starts periodic refreshing in the background.
+// The background refreshing is started even if the initial refresh fails; the error is returned for reporting only.
 func (c *Client) Start(ctx context.Context) error {
-	if err := c.refresh(); err != nil {
-		return fmt.Errorf("get active alerts: %w", err)
-	}
+	err := c.refresh()
 
 	go func() {
+		t := time.NewTicker(refreshInterval)
+		defer t.Stop()
+
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(time.Minute):
+			case <-t.C:
 				if err := c.refresh(); err != nil {
 					c.l.Error().Err(err).Msg("get active air raid alerts failed")
-					continue
 				}
 			}
 		}
 	}()
+
+	if err != nil {
+		return fmt.Errorf("get active alerts: %w", err)
+	}
 
 	return nil
 }
 
 func (c *Client) refresh() error {
 	res := activeAlertsResponse{}
-	if err := c.c.GetJSON("https://api.alerts.in.ua/v1/alerts/active.json", &res); err != nil {
+	if err := c.c.GetJSON(activeAlertsURL, &res); err != nil {
 		return fmt.Errorf("get json: %w", err)
 	}
 
-	newAlerts := make(map[int]Alert)
-	for _, alert := range res.Alerts {
-		regID := regionID(alert.Region, alert.City)
-		if regID == regionUnknown {
-			continue
-		}
-
-		// We count only regions, while alerts.in.ua provides per-city alerts.
-		if _, exists := newAlerts[regID]; !exists {
-			newAlerts[regID] = alert
-		}
-	}
+	newAlerts := airRaidAlertsByUID(res.Alerts)
 
 	c.mux.Lock()
 	defer c.mux.Unlock()
 
-	curRegions := make([]int, 0, len(c.activeAlerts))
-	for k := range c.activeAlerts {
-		curRegions = append(curRegions, k)
-	}
-
-	// Delete expired alerts
-	for _, regID := range curRegions {
-		if _, exists := newAlerts[regID]; !exists {
-			c.l.Info().Str("region", c.activeAlerts[regID].Region).Msg("air raid alert expired")
-			delete(c.activeAlerts, regID)
+	for uid, a := range c.activeAlerts {
+		if _, ok := newAlerts[uid]; !ok {
+			c.l.Info().Int("uid", uid).Str("location", a.Title).Msg("air raid alert expired")
 		}
 	}
 
-	// Add new alerts
-	for k, v := range newAlerts {
-		if _, exists := c.activeAlerts[k]; !exists {
-			c.l.Info().Str("region", v.Region).Msg("new air raid alert")
-			c.activeAlerts[k] = v
+	for uid, a := range newAlerts {
+		if _, ok := c.activeAlerts[uid]; !ok {
+			c.l.Info().Int("uid", uid).Str("location", a.Title).Msg("new air raid alert")
 		}
 	}
+
+	c.activeAlerts = newAlerts
 
 	return nil
 }
 
+// airRaidAlertsByUID returns air raid alerts declared for whole oblasts and special-status cities.
+// Alerts of other types (shelling, etc.) and partial alerts (raions, hromadas, ordinary cities) are ignored,
+// because the client location is known only up to the oblast.
+func airRaidAlertsByUID(alerts []Alert) map[int]Alert {
+	res := make(map[int]Alert)
+
+	for _, a := range alerts {
+		if a.AlertType != alertTypeAirRaid {
+			continue
+		}
+
+		uid, err := strconv.Atoi(a.LocationUID)
+		if err != nil {
+			continue
+		}
+
+		switch {
+		case a.LocationType == "oblast":
+		case a.LocationType == "city" && (uid == uidKyiv || uid == uidSevastopol):
+		default:
+			continue
+		}
+
+		res[uid] = a
+	}
+
+	return res
+}
+
+// IsActiveInRegion reports whether an air raid alert is declared for the whole oblast
+// (or the special-status city, like Kyiv) the given location belongs to.
 func (c *Client) IsActiveInRegion(region, city string) bool {
+	uid := locationUID(region, city)
+	if uid == uidUnknown {
+		return false
+	}
+
 	c.mux.RLock()
 	defer c.mux.RUnlock()
 
-	_, ok := c.activeAlerts[regionID(region, city)]
+	_, ok := c.activeAlerts[uid]
 
 	return ok
-}
-
-func regionID(region, city string) int {
-	if city == "Kyiv" || city == "м. Київ" {
-		return regionKyiv
-	}
-
-	// TODO: add missing regions:
-	// https://devs.alerts.in.ua/#modeluid
-	// https://simplemaps.com/data/ua-cities
-	switch region {
-	case "Kyyivs'ka Oblast'", "Київська область":
-		return regionKyivska
-	case "Mykolayivs'ka Oblast'", "Миколаївська область":
-		return regionMykolaivska
-	case "Zakarpats'ka Oblast'", "Закарпатська область":
-		return regionZakarpatska
-	case "Zaporiz'ka Oblast'", "Запорізька область":
-		return regionZaporizka
-	default:
-		return regionUnknown
-	}
 }
